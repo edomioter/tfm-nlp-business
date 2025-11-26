@@ -1,0 +1,16 @@
+# --- Core Framework ---
+llama-index-core>=0.10.30
+
+# --- Integraciones (LLMs & Graph Stores) ---
+llama-index-llms-google-genai
+llama-index-embeddings-google-genai
+google-generativeai
+
+# --- Neo4j (Graph & Vector) ---
+llama-index-vector-stores-neo4jvector
+llama-index-graph-stores-neo4j
+neo4j>=5.18.0
+
+# --- Drivers & Utilidades ---
+python-dotenv>=1.0.0
+nest_asyncio

@@ -1,0 +1,10 @@
+[
+  {
+    "question": "¿Cuál es la ruta de navegación más común de los usuarios que acabaron comprando el producto X?",
+    "cypher": "MATCH (c:Cliente)-[:COMPRO_EN]->(e:Empresa) WHERE e.nombre CONTAINS 'X' MATCH (c)-[:REALIZO_VISITA]->(v:VisitaWeb) WITH c, v ORDER BY v.fecha ASC WITH c, collect(v.url) as path RETURN str(path) as ruta, count(*) as frecuencia ORDER BY frecuencia DESC LIMIT 5"
+  },
+  {
+    "question": "¿Cuántos leads se convirtieron en clientes la semana pasada?",
+    "cypher": "MATCH (l:Lead) WHERE l.fecha_conversion >= date() - duration('P7D') RETURN count(l)"
+  }
+]
