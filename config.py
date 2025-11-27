@@ -48,7 +48,27 @@ LOGICA:
 """
 
 # --- Prompts (Templates) ---
-# Definimos la plantilla aquí para no ensuciar la lógica del motor
+# Template base para generación de Cypher con soporte para RAG híbrido
+# Los placeholders {graph_context} y {examples} permiten inyección dinámica de contexto
+BASE_CYPHER_TEMPLATE = """SYSTEM PROMPT:
+Eres un experto en análisis de datos de empresas y experto en Neo4j Cypher.
+Tu objetivo es responder preguntas de negocio traduciéndolas a consultas Cypher precisas.
+Debes usar EXCLUSIVAMENTE el siguiente esquema. No inventes relaciones.
+
+ESQUEMA OBLIGATORIO:
+{schema}
+
+{graph_context}{examples}PREGUNTA USUARIO: {query_str}
+
+INSTRUCCIONES:
+- Usa siempre MATCH con las direcciones de flecha correctas.
+- Para preguntas sobre 'trayectoria completa' o 'antes de registrarse', usa siempre la relación [:IDENTIFIED_AS] para saltar del User al Visitor y encontrar sesiones antiguas.
+- No alucines nombres de relaciones o propiedades que no estén en el esquema.
+- No incluyas bloques de código markdown.
+- Usa el contexto del negocio proporcionado para generar consultas más precisas y contextuales.
+"""
+
+# Template legado (mantener por compatibilidad si se usa en otra parte)
 CYPHER_GEN_TEMPLATE = PromptTemplate(
     "SYSTEM PROMPT:\n"
     "Eres un experto en análisis de datos de empresas y experto en Neo4j Cypher.\n"

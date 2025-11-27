@@ -1,24 +1,27 @@
 # agent/engine.py
-from typing import Any, Tuple, List
+from typing import Any, Tuple, Optional
 from llama_index.core.query_engine import CustomQueryEngine
 from llama_index.core.base.response.schema import Response
 from llama_index.graph_stores.neo4j import Neo4jGraphStore
 from llama_index.core.retrievers import BaseRetriever
 from neo4j.exceptions import CypherSyntaxError, ClientError
+from .graph_context_provider import GraphContextProvider
 
 
 #    Motor SOTA que combina:
 #    1. RAG Dinámico (busca ejemplos en Neo4j Vector).
 #    2. Prompting Adaptativo (cambia según contexto).
 #    3. Self-Healing (corrige su propio código Cypher).
+#    4. GraphRAG (contexto estadístico del grafo).
 
 class SmartNeo4jEngine(CustomQueryEngine):
-    
+
     graph_store: Neo4jGraphStore
     llm: Any
     retriever: BaseRetriever  # Interfaz genérica para buscar ejemplos
     schema_str: str
     max_retries: int = 3
+    graph_context_provider: Optional[GraphContextProvider] = None  # GraphRAG provider
 
     def _validate_syntax(self, cypher: str) -> Tuple[bool, str]:
         # Valida la sintaxis usando EXPLAIN sin ejecutar.
@@ -36,9 +39,11 @@ class SmartNeo4jEngine(CustomQueryEngine):
 
     #   Construye el prompt. Si el retriever encuentra ejemplos útiles,
     #   los inyecta. Si no, omite la sección de ejemplos por completo.
+    #   Ahora también integra contexto del grafo (GraphRAG).
     def _build_dynamic_prompt(self, query_str: str) -> str:
+            from config import BASE_CYPHER_TEMPLATE
 
-            # 1. Recuperar ejemplos semánticamente similares (Top-k)
+            # 1. Recuperar ejemplos semánticamente similares (Top-k) - Vector RAG
             nodes = self.retriever.retrieve(query_str)
 
             # 2. Formatear ejemplos (si existen)
@@ -50,29 +55,33 @@ class SmartNeo4jEngine(CustomQueryEngine):
                 examples_block = (
                     f"--- EJEMPLOS DE REFERENCIA (Úsalos como guía de estilo y lógica) ---\n"
                     f"{examples_text}\n"
-                    f"-------------------------------------------------------------------\n"
+                    f"-------------------------------------------------------------------\n\n"
                 )
 
-            # 3. Ensamblar Prompt Final
-            prompt = (
-                "SYSTEM PROMPT:\n"
-                "Eres un experto en análisis de datos de empresas y experto en Neo4j Cypher.\n"
-                "Tu objetivo es responder preguntas de negocio traduciéndolas a consultas Cypher precisas.\n"
-                "Debes usar EXCLUSIVAMENTE el siguiente esquema. No inventes relaciones.\n\n"
-                f"ESQUEMA OBLIGATORIO:\n{self.schema_str}\n\n"
-                f"{examples_block}"
-                f"PREGUNTA USUARIO: {query_str}\n\n"
-                "INSTRUCCIONES:\n"
-                "- Usa siempre MATCH con las direcciones de flecha correctas.\n"
-                "- No alucines nombres de relaciones o propiedades que no estén en el esquema.\n"
-                "- No incluyas bloques de código markdown.\n"
+            # 3. Recuperar contexto del grafo (GraphRAG)
+            graph_context_block = ""
+            if self.graph_context_provider:
+                try:
+                    context = self.graph_context_provider.get_business_context(query_str)
+                    graph_context_block = self.graph_context_provider.format_context_for_prompt(context)
+                    graph_context_block += "\n"
+                except Exception as e:
+                    print(f"[GraphRAG] Error recuperando contexto: {e}")
+
+            # 4. Ensamblar Prompt Final usando template centralizado
+            prompt = BASE_CYPHER_TEMPLATE.format(
+                schema=self.schema_str,
+                graph_context=graph_context_block,
+                examples=examples_block,
+                query_str=query_str
             )
             return prompt
 
     async def _abuild_dynamic_prompt(self, query_str: str) -> str:
             """Versión asíncrona de _build_dynamic_prompt."""
+            from config import BASE_CYPHER_TEMPLATE
 
-            # 1. Recuperar ejemplos semánticamente similares (Top-k) - Asíncrono
+            # 1. Recuperar ejemplos semánticamente similares (Top-k) - Asíncrono - Vector RAG
             nodes = await self.retriever.aretrieve(query_str)
 
             # 2. Formatear ejemplos (si existen)
@@ -84,22 +93,25 @@ class SmartNeo4jEngine(CustomQueryEngine):
                 examples_block = (
                     f"--- EJEMPLOS DE REFERENCIA (Úsalos como guía de estilo y lógica) ---\n"
                     f"{examples_text}\n"
-                    f"-------------------------------------------------------------------\n"
+                    f"-------------------------------------------------------------------\n\n"
                 )
 
-            # 3. Ensamblar Prompt Final
-            prompt = (
-                "SYSTEM PROMPT:\n"
-                "Eres un experto en análisis de datos de empresas y experto en Neo4j Cypher.\n"
-                "Tu objetivo es responder preguntas de negocio traduciéndolas a consultas Cypher precisas.\n"
-                "Debes usar EXCLUSIVAMENTE el siguiente esquema. No inventes relaciones.\n\n"
-                f"ESQUEMA OBLIGATORIO:\n{self.schema_str}\n\n"
-                f"{examples_block}"
-                f"PREGUNTA USUARIO: {query_str}\n\n"
-                "INSTRUCCIONES:\n"
-                "- Usa siempre MATCH con las direcciones de flecha correctas.\n"
-                "- No alucines nombres de relaciones o propiedades que no estén en el esquema.\n"
-                "- No incluyas bloques de código markdown.\n"
+            # 3. Recuperar contexto del grafo (GraphRAG)
+            graph_context_block = ""
+            if self.graph_context_provider:
+                try:
+                    context = self.graph_context_provider.get_business_context(query_str)
+                    graph_context_block = self.graph_context_provider.format_context_for_prompt(context)
+                    graph_context_block += "\n"
+                except Exception as e:
+                    print(f"[GraphRAG] Error recuperando contexto: {e}")
+
+            # 4. Ensamblar Prompt Final usando template centralizado
+            prompt = BASE_CYPHER_TEMPLATE.format(
+                schema=self.schema_str,
+                graph_context=graph_context_block,
+                examples=examples_block,
+                query_str=query_str
             )
             return prompt
 

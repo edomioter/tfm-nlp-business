@@ -1,27 +1,32 @@
 # agent/agent_factory.py
-from typing import Any
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.core.agent import ReActAgent
 
 from .engine import SmartNeo4jEngine
+from .graph_context_provider import GraphContextProvider
 
 #  Construye un Agente ReAct con memoria y acceso a la herramienta de Neo4j.
 def create_graph_agent(graph_store, vector_store, llm, schema_str):
-        
-    # 1. Preparar el Retriever (Buscador de ejemplos)
+
+    # 1. Preparar el Retriever (Buscador de ejemplos) - Vector RAG
     from llama_index.core import VectorStoreIndex
     vector_index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
     retriever = vector_index.as_retriever(similarity_top_k=3)
 
-    # 2. Instancia del Motor Inteligente (La lógica compleja de Cypher)
+    # 2. Inicializar el GraphContextProvider - Graph RAG
+    graph_context_provider = GraphContextProvider(graph_store=graph_store)
+
+    # 3. Instancia del Motor Inteligente (La lógica compleja de Cypher)
+    # Ahora con GraphRAG híbrido: Vector RAG + Graph RAG
     smart_engine = SmartNeo4jEngine(
         graph_store=graph_store,
         llm=llm,
         retriever=retriever,
-        schema_str=schema_str
+        schema_str=schema_str,
+        graph_context_provider=graph_context_provider
     )
 
-    # 3. Encapsular el Motor como una HERRAMIENTA
+    # 4. Encapsular el Motor como una HERRAMIENTA
     # La descripción es CRÍTICA: le dice al LLM CUÁNDO usar esto.
     graph_tool = QueryEngineTool(
         query_engine=smart_engine,
@@ -35,7 +40,7 @@ def create_graph_agent(graph_store, vector_store, llm, schema_str):
         ),
     )
 
-    # 4. CONSTRUCCIÓN DEL AGENTE
+    # 5. CONSTRUCCIÓN DEL AGENTE
     # Nota: ReActAgent maneja el estado y memoria internamente como parte del workflow
     agent = ReActAgent(
         name="Business Data Analyst",
