@@ -1,0 +1,296 @@
+{
+  "summary": {
+    "total_tests": 13,
+    "successful": 12,
+    "failed": 1,
+    "success_rate": 0.9230769230769231,
+    "avg_execution_time": 3.5983233085045447,
+    "avg_attempts": 1.1538461538461537
+  },
+  "by_category": {
+    "simple": {
+      "total": 3,
+      "success": 3,
+      "avg_time": 1.1657588481903076,
+      "success_rate": 1.0
+    },
+    "agregacion": {
+      "total": 3,
+      "success": 3,
+      "avg_time": 3.8384250005086265,
+      "success_rate": 1.0
+    },
+    "compleja": {
+      "total": 3,
+      "success": 3,
+      "avg_time": 6.83893346786499,
+      "success_rate": 1.0
+    },
+    "temporal": {
+      "total": 2,
+      "success": 1,
+      "avg_time": 3.85918128490448,
+      "success_rate": 0.5
+    },
+    "atributos": {
+      "total": 2,
+      "success": 2,
+      "avg_time": 1.7652442455291748,
+      "success_rate": 1.0
+    }
+  },
+  "test_results": [
+    {
+      "test_id": "simple_01",
+      "category": "simple",
+      "question": "¿Cuántos usuarios hay en total?",
+      "success": true,
+      "execution_time": 1.0294983386993408,
+      "cypher_generated": "MATCH (u:User)\nRETURN count(u) AS total_users",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'total_users': 100}]",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (u:User)\nRETURN count(u) AS total_users",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "simple_02",
+      "category": "simple",
+      "question": "¿Cuántas sesiones se han registrado?",
+      "success": true,
+      "execution_time": 1.0716369152069092,
+      "cypher_generated": "MATCH (s:Session)\nRETURN count(s) AS total_sessions",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'total_sessions': 500}]",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (s:Session)\nRETURN count(s) AS total_sessions",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "simple_03",
+      "category": "simple",
+      "question": "¿Cuántos visitantes anónimos hay?",
+      "success": true,
+      "execution_time": 1.3961412906646729,
+      "cypher_generated": "MATCH (v:Visitor)\nWHERE NOT (v)-[:IDENTIFIED_AS]->(:User)\nRETURN count(v) AS anonymous_visitors_count",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'anonymous_visitors_count': 270}]",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (v:Visitor)\nWHERE NOT (v)-[:IDENTIFIED_AS]->(:User)\nRETURN count(v) AS anonymous_visitors_count",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "agg_01",
+      "category": "agregacion",
+      "question": "¿Cuál es la tasa de conversión general?",
+      "success": true,
+      "execution_time": 4.920199155807495,
+      "cypher_generated": "MATCH (s:Session)\nWITH count(s) AS total_sessions\nMATCH (sc:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\nWITH total_sessions, count(DISTINCT sc) AS converted_sessions\nRETURN (toFloat(converted_sessions) / total_sessions) * 100 AS overall_conversion_rate",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'overall_conversion_rate': 53.2}]",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (s:Session)\nWITH count(s) AS total_sessions\nMATCH (sc:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\nWITH total_sessions, count(DISTINCT sc) AS converted_sessions\nRETURN (toFloat(converted_sessions) / total_sessions) * 100 AS overall_conversion_rate",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "agg_02",
+      "category": "agregacion",
+      "question": "¿Cuál es el promedio de eventos por sesión?",
+      "success": true,
+      "execution_time": 3.052041530609131,
+      "cypher_generated": "MATCH (s:Session)\nOPTIONAL MATCH (s)-[:CONTIENE]->(e:Event)\nRETURN toFloat(COUNT(e)) / COUNT(DISTINCT s) AS promedio_eventos_por_sesion",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'promedio_eventos_por_sesion': 10.402}]",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (s:Session)\nOPTIONAL MATCH (s)-[:CONTIENE]->(e:Event)\nRETURN toFloat(COUNT(e)) / COUNT(DISTINCT s) AS promedio_eventos_por_sesion",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "agg_03",
+      "category": "agregacion",
+      "question": "¿Cuántas conversiones hubo por ciudad?",
+      "success": true,
+      "execution_time": 3.543034315109253,
+      "cypher_generated": "MATCH (u:User)-[:REALIZO]->(s:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\nRETURN u.city AS Ciudad, COUNT(c) AS TotalConversiones\nORDER BY TotalConversiones DESC",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'Ciudad': 'Valladolid', 'TotalConversiones': 11}, {'Ciudad': 'Ceuta', 'TotalConversiones': 9}, {'Ciudad': 'Vizcaya', 'TotalConversiones': 9}, {'Ciudad': 'Cáceres', 'TotalConversiones': 8}, {'Ciudad'",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (u:User)-[:REALIZO]->(s:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\nRETURN u.city AS Ciudad, COUNT(c) AS TotalConversiones\nORDER BY TotalConversiones DESC",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "complex_01",
+      "category": "compleja",
+      "question": "¿Qué usuarios identificados provienen de visitantes con más de 3 sesiones?",
+      "success": true,
+      "execution_time": 1.9686229228973389,
+      "cypher_generated": "MATCH (v:Visitor)-[:INICIO_SESION]->(s:Session)\nWITH v, COUNT(s) AS sessionCount\nWHERE sessionCount > 3\nMATCH (v)-[:IDENTIFIED_AS]->(u:User)\nRETURN DISTINCT u.user_id, u.first_name, u.last_name, u.email",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'u.user_id': 'U-da5c0857', 'u.first_name': 'Carlos', 'u.last_name': 'Company', 'u.email': 'peirodafne@example.net'}, {'u.user_id': 'U-3be2ca92', 'u.first_name': 'Aníbal', 'u.last_name': 'Rosales', '",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (v:Visitor)-[:INICIO_SESION]->(s:Session)\nWITH v, COUNT(s) AS sessionCount\nWHERE sessionCount > 3\nMATCH (v)-[:IDENTIFIED_AS]->(u:User)\nRETURN DISTINCT u.user_id, u.first_name, u.last_name, u.email",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "complex_02",
+      "category": "compleja",
+      "question": "¿Cuál es la ruta más común de eventos que llevan a una conversión?",
+      "success": true,
+      "execution_time": 16.537938356399536,
+      "cypher_generated": "MATCH (s:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\nMATCH (s)-[:CONTIENE]->(e:Event)\nWHERE e.timestamp < c.timestamp\nWITH s, e\nORDER BY e.timestamp\nWITH s, COLLECT(e.name) AS eventPath\nWHERE SIZE(eventPath) > 0\nRETURN eventPath, COUNT(eventPath) AS pathCount\nORDER BY pathCount DESC\nLIMIT 1",
+      "attempts": 2,
+      "error": "",
+      "result_sample": "[{'eventPath': ['page_view', 'page_view'], 'pathCount': 30}]",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (s:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\nMATCH (s)-[:CONTIENE]->(e:Event)\nWHERE e.timestamp < c.timestamp\nWITH s, COLLECT(e.name ORDER BY e.timestamp) AS eventPath\nWHERE SIZE(eventPath) > 0\nRETURN eventPath, COUNT(eventPath) AS pathCount\nORDER BY pathCount DESC\nLIMIT 1",
+          "status": "failed",
+          "error": "{code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input 'ORDER': expected an expression, ')' or ',' (line 4, column 24 (offset: 154))\n\"WITH s, COLLECT(e.name ORDER BY e.timestamp) AS eventPath\"\n                        ^}"
+        },
+        {
+          "attempt": 2,
+          "cypher": "MATCH (s:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\nMATCH (s)-[:CONTIENE]->(e:Event)\nWHERE e.timestamp < c.timestamp\nWITH s, e\nORDER BY e.timestamp\nWITH s, COLLECT(e.name) AS eventPath\nWHERE SIZE(eventPath) > 0\nRETURN eventPath, COUNT(eventPath) AS pathCount\nORDER BY pathCount DESC\nLIMIT 1",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "complex_03",
+      "category": "compleja",
+      "question": "¿Qué dispositivos tienen la mayor tasa de conversión?",
+      "success": true,
+      "execution_time": 2.0102391242980957,
+      "cypher_generated": "MATCH (s:Session)\nWITH s.device AS device, COUNT(s) AS totalSessions\nOPTIONAL MATCH (s)-[:CONVERSION_REALIZADA]->(:Conversion)\nWITH device, totalSessions, COUNT(CASE WHEN s IS NOT NULL THEN 1 ELSE NULL END) AS convertedSessions\nRETURN device,\n       toFloat(convertedSessions) / totalSessions AS conversionRate\nORDER BY conversionRate DESC",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'device': 'tablet', 'conversionRate': 4.9480519480519485}, {'device': 'mobile', 'conversionRate': 1.886138613861386}, {'device': 'desktop', 'conversionRate': 1.7239819004524888}]",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (s:Session)\nWITH s.device AS device, COUNT(s) AS totalSessions\nOPTIONAL MATCH (s)-[:CONVERSION_REALIZADA]->(:Conversion)\nWITH device, totalSessions, COUNT(CASE WHEN s IS NOT NULL THEN 1 ELSE NULL END) AS convertedSessions\nRETURN device,\n       toFloat(convertedSessions) / totalSessions AS conversionRate\nORDER BY conversionRate DESC",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "temporal_01",
+      "category": "temporal",
+      "question": "¿Cuántos usuarios se registraron en los últimos 30 días?",
+      "success": true,
+      "execution_time": 3.7971200942993164,
+      "cypher_generated": "MATCH (u:User)\nWHERE u.registration_date >= datetime('2025-11-27T14:46:51.761614000+00:00') - duration({days: 30})\nRETURN count(u) AS usuarios_registrados_ultimos_30_dias",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'usuarios_registrados_ultimos_30_dias': 8}]",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (u:User)\nWHERE u.registration_date >= datetime('2025-11-27T14:46:51.761614000+00:00') - duration({days: 30})\nRETURN count(u) AS usuarios_registrados_ultimos_30_dias",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "temporal_02",
+      "category": "temporal",
+      "question": "¿Cuál es la tendencia de conversiones por mes?",
+      "success": false,
+      "execution_time": 3.9212424755096436,
+      "cypher_generated": "MATCH (c:Conversion)\nRETURN datetime.truncate(c.timestamp, 'month') AS month, count(c) AS total_conversions\nORDER BY month",
+      "attempts": 2,
+      "error": "",
+      "result_sample": "Error procesando solicitud: {code: Neo.ClientError.Statement.TypeError} {message: Can't coerce `2025-02-18T21:18:48.348165Z` to String}",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (c:Conversion)\nRETURN datetime.format(c.timestamp, \"yyyy-MM\") AS month, count(c) AS total_conversions\nORDER BY month",
+          "status": "failed",
+          "error": "{code: Neo.ClientError.Statement.SyntaxError} {message: Unknown function 'datetime.format' (line 2, column 8 (offset: 36))\n\"RETURN datetime.format(c.timestamp, \"yyyy-MM\") AS month, count(c) AS total_conversions\"\n        ^}"
+        },
+        {
+          "attempt": 2,
+          "cypher": "MATCH (c:Conversion)\nRETURN datetime.truncate(c.timestamp, 'month') AS month, count(c) AS total_conversions\nORDER BY month",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "attr_01",
+      "category": "atributos",
+      "question": "¿De qué ciudades son los usuarios?",
+      "success": true,
+      "execution_time": 1.3255341053009033,
+      "cypher_generated": "MATCH (u:User)\nRETURN DISTINCT u.city",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'u.city': 'Soria'}, {'u.city': 'Ceuta'}, {'u.city': 'Zaragoza'}, {'u.city': 'Valladolid'}, {'u.city': 'Ourense'}, {'u.city': 'Badajoz'}, {'u.city': 'Tarragona'}, {'u.city': 'Jaén'}, {'u.city': 'La C",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (u:User)\nRETURN DISTINCT u.city",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "attr_02",
+      "category": "atributos",
+      "question": "¿Qué tipos de dispositivos usan los visitantes?",
+      "success": true,
+      "execution_time": 2.2049543857574463,
+      "cypher_generated": "MATCH (v:Visitor)-[:INICIO_SESION]->(s:Session)\nRETURN s.device AS TipoDeDispositivo, count(DISTINCT v) AS NumeroDeVisitantesUnicos, count(s) AS NumeroDeSesiones\nORDER BY NumeroDeSesiones DESC",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'TipoDeDispositivo': 'desktop', 'NumeroDeVisitantesUnicos': 169, 'NumeroDeSesiones': 221}, {'TipoDeDispositivo': 'mobile', 'NumeroDeVisitantesUnicos': 159, 'NumeroDeSesiones': 202}, {'TipoDeDisposit",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (v:Visitor)-[:INICIO_SESION]->(s:Session)\nRETURN s.device AS TipoDeDispositivo, count(DISTINCT v) AS NumeroDeVisitantesUnicos, count(s) AS NumeroDeSesiones\nORDER BY NumeroDeSesiones DESC",
+          "status": "success"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "timestamp": "2025-11-27T23:04:23.569142",
+    "model": "models/gemini-2.5-flash",
+    "embedding_model": "models/text-embedding-004",
+    "neo4j_url": "neo4j+s://ce30717d.databases.neo4j.io"
+  }
+}
