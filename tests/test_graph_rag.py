@@ -10,6 +10,10 @@ Uso:
     python test_graph_rag.py
 """
 import sys
+import os
+# Agregar el directorio raíz al path para importar módulos del proyecto
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
 from llama_index.graph_stores.neo4j import Neo4jGraphStore

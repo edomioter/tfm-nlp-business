@@ -14,3 +14,10 @@ neo4j>=5.18.0
 # --- Drivers & Utilidades ---
 python-dotenv>=1.0.0
 nest_asyncio
+pandas
+matplotlib
+seaborn
+
+# --- Jupyter Notebook ---
+jupyter
+ipykernel
