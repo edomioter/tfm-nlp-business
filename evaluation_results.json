@@ -1,0 +1,321 @@
+{
+  "summary": {
+    "total_tests": 13,
+    "successful": 12,
+    "failed": 1,
+    "success_rate": 0.9230769230769231,
+    "avg_execution_time": 17.4409651022691,
+    "avg_attempts": 1.4615384615384615
+  },
+  "by_category": {
+    "simple": {
+      "total": 3,
+      "success": 3,
+      "avg_time": 7.999907573064168,
+      "success_rate": 1.0
+    },
+    "agregacion": {
+      "total": 3,
+      "success": 2,
+      "avg_time": 34.07129732767741,
+      "success_rate": 0.6666666666666666
+    },
+    "compleja": {
+      "total": 3,
+      "success": 3,
+      "avg_time": 15.963088909784952,
+      "success_rate": 1.0
+    },
+    "temporal": {
+      "total": 2,
+      "success": 2,
+      "avg_time": 9.624996542930603,
+      "success_rate": 1.0
+    },
+    "atributos": {
+      "total": 2,
+      "success": 2,
+      "avg_time": 16.689835906028748,
+      "success_rate": 1.0
+    }
+  },
+  "test_results": [
+    {
+      "test_id": "simple_01",
+      "category": "simple",
+      "question": "¿Cuántos usuarios hay en total?",
+      "success": true,
+      "execution_time": 6.154993295669556,
+      "cypher_generated": "MATCH (u:User)\nRETURN COUNT(u)",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'COUNT(u)': 100}]",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (u:User)\nRETURN COUNT(u)",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "simple_02",
+      "category": "simple",
+      "question": "¿Cuántas sesiones se han registrado?",
+      "success": true,
+      "execution_time": 7.82781982421875,
+      "cypher_generated": "MATCH (s:Session)\nRETURN count(s) AS total_sesiones",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'total_sesiones': 500}]",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (s:Session)\nRETURN count(s) AS total_sesiones",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "simple_03",
+      "category": "simple",
+      "question": "¿Cuántos visitantes anónimos hay?",
+      "success": true,
+      "execution_time": 10.0169095993042,
+      "cypher_generated": "MATCH (v:Visitor)\nWHERE NOT (v)-[:IDENTIFIED_AS]->(:User)\nRETURN count(v) AS visitantes_anonimos",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'visitantes_anonimos': 270}]",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (v:Visitor)\nWHERE NOT (v)-[:IDENTIFIED_AS]->(:User)\nRETURN count(v) AS visitantes_anonimos",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "agg_01",
+      "category": "agregacion",
+      "question": "¿Cuál es la tasa de conversión general?",
+      "success": false,
+      "execution_time": 65.11435413360596,
+      "cypher_generated": "MATCH (s:Session)\nWITH count(s) AS totalSessions, count(CASE WHEN exists((s)-[:CONVERSION_REALIZADA]->(:Conversion)) THEN 1 END) AS convertingSessions\nRETURN toFloat(convertingSessions) / totalSessions * 100.0 AS tasa_de_conversion_general\n\n### Explicación de la consulta:\n1.  `MATCH (s:Session)`: Se inicia seleccionando todos los nodos de tipo `Session` para establecer la base del cálculo total.\n2.  `WITH count(s) AS totalSessions, count(CASE WHEN exists((s)-[:CONVERSION_REALIZADA]->(:Conversion)) THEN 1 END) AS convertingSessions`: Este es el paso principal del cálculo y se realiza en una sola pasada para mayor eficiencia.\n    *   `count(s) AS totalSessions`: Cuenta el número total de sesiones encontradas.\n    *   `count(CASE WHEN exists(...) THEN 1 END)`: Para cada sesión `s`, se utiliza la función `exists()` para verificar si tiene una relación saliente `[:CONVERSION_REALIZADA]`. Si la relación existe, el `CASE` devuelve un valor (`1`) que es contado. Esto nos da el número exacto de sesiones que tuvieron una conversión.\n3.  `RETURN toFloat(convertingSessions) / totalSessions * 100.0 AS tasa_de_conversion_general`: Finalmente, se calcula la tasa dividiendo las sesiones con conversión entre el total de sesiones. Se usa `toFloat()` para asegurar una división con decimales y se multiplica por 100 para obtener el porcentaje.",
+      "attempts": 3,
+      "error": "",
+      "result_sample": "Error procesando solicitud: No se pudo generar Cypher válido tras 3 intentos.",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "Para calcular la tasa de conversión general, necesitamos dividir el número de sesiones que tuvieron una conversión entre el número total de sesiones.\n\nLa relación `(:Session)-[:CONVERSION_REALIZADA]->(:Conversion)` nos indica explícitamente qué sesiones generaron una venta.\n\n### Consulta Cypher:\n\nMATCH (s:Session)\nOPTIONAL MATCH (s)-[:CONVERSION_REALIZADA]->(c:Conversion)\nWITH count(DISTINCT s) AS totalSessions, count(DISTINCT c) AS convertingSessions\nRETURN toFloat(convertingSessions) / totalSessions * 100.0 AS tasa_de_conversion_porcentual\n\n\n### Explicación de la consulta:\n1.  `MATCH (s:Session)`: Primero, seleccionamos todos los nodos de tipo `Session` en el grafo.\n2.  `OPTIONAL MATCH (s)-[:CONVERSION_REALIZADA]->(c:Conversion)`: Para cada sesión encontrada, intentamos encontrar una relación saliente de tipo `CONVERSION_REALIZADA` que apunte a un nodo `Conversion`. Usamos `OPTIONAL MATCH` para no descartar las sesiones que no convirtieron.\n3.  `WITH count(DISTINCT s) AS totalSessions, count(DISTINCT c) AS convertingSessions`: Contamos el total de sesiones (`totalSessions`) y el total de conversiones encontradas (`convertingSessions`). La función `count()` ignora los valores nulos, por lo que `count(c)` solo contará las sesiones donde el `OPTIONAL MATCH` tuvo éxito.\n4.  `RETURN toFloat(convertingSessions) / totalSessions * 100.0 AS ...`: Finalmente, realizamos la división y la multiplicamos por 100 para obtener el porcentaje de la tasa de conversión.",
+          "status": "failed",
+          "error": "{code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input 'Para': expected 'ALTER', 'ORDER BY', 'CALL', 'USING PERIODIC COMMIT', 'CREATE', 'LOAD CSV', 'START DATABASE', 'STOP DATABASE', 'DEALLOCATE', 'DELETE', 'DENY', 'DETACH', 'DROP', 'DRYRUN', 'FINISH', 'FOREACH', 'GRANT', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REALLOCATE', 'REMOVE', 'RENAME', 'RETURN', 'REVOKE', 'ENABLE SERVER', 'SET', 'SHOW', 'SKIP', 'TERMINATE', 'UNWIND', 'USE' or 'WITH' (line 1, column 9 (offset: 8))\n\"EXPLAIN Para calcular la tasa de conversión general, necesitamos dividir el número de sesiones que tuvieron una conversión entre el número total de sesiones.\"\n         ^}"
+        },
+        {
+          "attempt": 2,
+          "cypher": "MATCH (s:Session)\nWITH count(s) AS totalSessions, count(CASE WHEN exists((s)-[:CONVERSION_REALIZADA]->(:Conversion)) THEN 1 END) AS convertingSessions\nRETURN toFloat(convertingSessions) / totalSessions * 100.0 AS tasa_de_conversion_general\n\n### Explicación de la consulta:\n1.  `MATCH (s:Session)`: Se inicia seleccionando todos los nodos de tipo `Session` para establecer la base del cálculo total.\n2.  `WITH count(s) AS totalSessions, count(CASE WHEN exists((s)-[:CONVERSION_REALIZADA]->(:Conversion)) THEN 1 END) AS convertingSessions`: Este es el paso principal del cálculo y se realiza en una sola pasada para mayor eficiencia.\n    *   `count(s) AS totalSessions`: Cuenta el número total de sesiones encontradas.\n    *   `count(CASE WHEN exists(...) THEN 1 END)`: Para cada sesión `s`, se utiliza la función `exists()` para verificar si tiene una relación saliente `[:CONVERSION_REALIZADA]`. Si la relación existe, el `CASE` devuelve un valor (`1`) que es contado. Esto nos da el número exacto de sesiones que tuvieron una conversión.\n3.  `RETURN toFloat(convertingSessions) / totalSessions * 100.0 AS tasa_de_conversion_general`: Finalmente, se calcula la tasa dividiendo las sesiones con conversión entre el total de sesiones. Se usa `toFloat()` para asegurar una división con decimales y se multiplica por 100 para obtener el porcentaje.",
+          "status": "failed",
+          "error": "{code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input '#': expected ',', 'ORDER BY', 'CALL', 'CREATE', 'LOAD CSV', 'DELETE', 'DETACH', 'FINISH', 'FOREACH', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REMOVE', 'RETURN', 'SET', 'SKIP', 'UNION', 'UNWIND', 'USE', 'WITH' or <EOF> (line 5, column 1 (offset: 249))\n\"### Explicación de la consulta:\"\n ^}"
+        },
+        {
+          "attempt": 3,
+          "cypher": "MATCH (s:Session)\nWITH count(s) AS totalSessions, count(CASE WHEN exists((s)-[:CONVERSION_REALIZADA]->(:Conversion)) THEN 1 END) AS convertingSessions\nRETURN toFloat(convertingSessions) / totalSessions * 100.0 AS tasa_de_conversion_general\n\n### Explicación de la consulta:\n1.  `MATCH (s:Session)`: Se inicia seleccionando todos los nodos de tipo `Session` para establecer la base del cálculo total.\n2.  `WITH count(s) AS totalSessions, count(CASE WHEN exists((s)-[:CONVERSION_REALIZADA]->(:Conversion)) THEN 1 END) AS convertingSessions`: Este es el paso principal del cálculo y se realiza en una sola pasada para mayor eficiencia.\n    *   `count(s) AS totalSessions`: Cuenta el número total de sesiones encontradas.\n    *   `count(CASE WHEN exists(...) THEN 1 END)`: Para cada sesión `s`, se utiliza la función `exists()` para verificar si tiene una relación saliente `[:CONVERSION_REALIZADA]`. Si la relación existe, el `CASE` devuelve un valor (`1`) que es contado. Esto nos da el número exacto de sesiones que tuvieron una conversión.\n3.  `RETURN toFloat(convertingSessions) / totalSessions * 100.0 AS tasa_de_conversion_general`: Finalmente, se calcula la tasa dividiendo las sesiones con conversión entre el total de sesiones. Se usa `toFloat()` para asegurar una división con decimales y se multiplica por 100 para obtener el porcentaje.",
+          "status": "failed",
+          "error": "{code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input '#': expected ',', 'ORDER BY', 'CALL', 'CREATE', 'LOAD CSV', 'DELETE', 'DETACH', 'FINISH', 'FOREACH', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REMOVE', 'RETURN', 'SET', 'SKIP', 'UNION', 'UNWIND', 'USE', 'WITH' or <EOF> (line 5, column 1 (offset: 249))\n\"### Explicación de la consulta:\"\n ^}"
+        }
+      ]
+    },
+    {
+      "test_id": "agg_02",
+      "category": "agregacion",
+      "question": "¿Cuál es el promedio de eventos por sesión?",
+      "success": true,
+      "execution_time": 16.711249828338623,
+      "cypher_generated": "MATCH (s:Session)\nRETURN avg(COUNT { (s)-[:CONTIENE]->(:Event) }) AS promedio_eventos_por_sesion",
+      "attempts": 2,
+      "error": "",
+      "result_sample": "[{'promedio_eventos_por_sesion': 10.402000000000001}]",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (s:Session)\nRETURN avg(size((s)-[:CONTIENE]->(:Event))) AS promedio_eventos_por_sesion",
+          "status": "failed",
+          "error": "{code: Neo.ClientError.Statement.SyntaxError} {message: A pattern expression should only be used in order to test the existence of a pattern. It can no longer be used inside the function size(), an alternative is to replace size() with COUNT {}. (line 2, column 17 (offset: 42))\n\"RETURN avg(size((s)-[:CONTIENE]->(:Event))) AS promedio_eventos_por_sesion\"\n                 ^}"
+        },
+        {
+          "attempt": 2,
+          "cypher": "MATCH (s:Session)\nRETURN avg(COUNT { (s)-[:CONTIENE]->(:Event) }) AS promedio_eventos_por_sesion",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "agg_03",
+      "category": "agregacion",
+      "question": "¿Cuántas conversiones hubo por ciudad?",
+      "success": true,
+      "execution_time": 20.388288021087646,
+      "cypher_generated": "MATCH (c:Conversion)<-[:CONVERSION_REALIZADA]-(:Session)<-[:INICIO_SESION]-(:Visitor)-[:IDENTIFIED_AS]->(u:User)\nWHERE u.city IS NOT NULL\nRETURN u.city AS Ciudad, count(c) AS TotalConversiones\nORDER BY TotalConversiones DESC",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'Ciudad': 'Valladolid', 'TotalConversiones': 12}, {'Ciudad': 'Ceuta', 'TotalConversiones': 9}, {'Ciudad': 'Vizcaya', 'TotalConversiones': 9}, {'Ciudad': 'Cáceres', 'TotalConversiones': 8}, {'Ciudad'",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (c:Conversion)<-[:CONVERSION_REALIZADA]-(:Session)<-[:INICIO_SESION]-(:Visitor)-[:IDENTIFIED_AS]->(u:User)\nWHERE u.city IS NOT NULL\nRETURN u.city AS Ciudad, count(c) AS TotalConversiones\nORDER BY TotalConversiones DESC",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "complex_01",
+      "category": "compleja",
+      "question": "¿Qué usuarios identificados provienen de visitantes con más de 3 sesiones?",
+      "success": true,
+      "execution_time": 7.168629169464111,
+      "cypher_generated": "MATCH (v:Visitor)-[:INICIO_SESION]->(s:Session)\nWITH v, count(s) AS totalSesiones\nWHERE totalSesiones > 3\nMATCH (v)-[:IDENTIFIED_AS]->(u:User)\nRETURN u.user_id, u.first_name, u.last_name, totalSesiones\nORDER BY totalSesiones DESC",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'u.user_id': 'U-00b69857', 'u.first_name': 'Alondra', 'u.last_name': 'Lloret', 'totalSesiones': 5}, {'u.user_id': 'U-2e727d2d', 'u.first_name': 'Cruz', 'u.last_name': 'Cuevas', 'totalSesiones': 5}, ",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (v:Visitor)-[:INICIO_SESION]->(s:Session)\nWITH v, count(s) AS totalSesiones\nWHERE totalSesiones > 3\nMATCH (v)-[:IDENTIFIED_AS]->(u:User)\nRETURN u.user_id, u.first_name, u.last_name, totalSesiones\nORDER BY totalSesiones DESC",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "complex_02",
+      "category": "compleja",
+      "question": "¿Cuál es la ruta más común de eventos que llevan a una conversión?",
+      "success": true,
+      "execution_time": 27.932100296020508,
+      "cypher_generated": "MATCH (s:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\nMATCH (s)-[:CONTIENE]->(e:Event)\nWITH s, e ORDER BY e.timestamp\nWITH s, collect(e.name) AS event_path\nWITH event_path, count(*) AS frequency\nRETURN event_path AS ruta_mas_comun, frequency AS frecuencia\nORDER BY frequency DESC\nLIMIT 1",
+      "attempts": 2,
+      "error": "",
+      "result_sample": "[{'ruta_mas_comun': ['page_view', 'page_view', 'page_view', 'page_view', 'page_view', 'page_view', 'page_view', 'page_view', 'page_view', 'page_view', 'page_view', 'page_view', 'page_view', 'page_view",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "Claro, aquí tienes la consulta Cypher para determinar la ruta de eventos más común que conduce a una conversión, junto con una explicación de su lógica.\n\n**Explicación de la consulta:**\n\nEsta consulta identifica primero todas las sesiones que resultaron en una venta (`:Conversion`). Luego, para cada una de esas sesiones, recopila la secuencia de nombres de eventos en orden cronológico. Finalmente, agrupa estas secuencias, las cuenta y devuelve la que aparece con mayor frecuencia, revelando el \"camino dorado\" que siguen los usuarios para comprar.\n\n**Consulta Cypher:**\n\nMATCH (s:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\nMATCH (s)-[:CONTIENE]->(e:Event)\nWITH s, e ORDER BY e.timestamp\nWITH s, collect(e.name) AS event_path\nWITH event_path, count(*) AS frequency\nRETURN event_path AS ruta_mas_comun, frequency AS frecuencia\nORDER BY frequency DESC\nLIMIT 1",
+          "status": "failed",
+          "error": "{code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input 'Claro': expected 'ALTER', 'ORDER BY', 'CALL', 'USING PERIODIC COMMIT', 'CREATE', 'LOAD CSV', 'START DATABASE', 'STOP DATABASE', 'DEALLOCATE', 'DELETE', 'DENY', 'DETACH', 'DROP', 'DRYRUN', 'FINISH', 'FOREACH', 'GRANT', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REALLOCATE', 'REMOVE', 'RENAME', 'RETURN', 'REVOKE', 'ENABLE SERVER', 'SET', 'SHOW', 'SKIP', 'TERMINATE', 'UNWIND', 'USE' or 'WITH' (line 1, column 9 (offset: 8))\n\"EXPLAIN Claro, aquí tienes la consulta Cypher para determinar la ruta de eventos más común que conduce a una conversión, junto con una explicación de su lógica.\"\n         ^}"
+        },
+        {
+          "attempt": 2,
+          "cypher": "MATCH (s:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\nMATCH (s)-[:CONTIENE]->(e:Event)\nWITH s, e ORDER BY e.timestamp\nWITH s, collect(e.name) AS event_path\nWITH event_path, count(*) AS frequency\nRETURN event_path AS ruta_mas_comun, frequency AS frecuencia\nORDER BY frequency DESC\nLIMIT 1",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "complex_03",
+      "category": "compleja",
+      "question": "¿Qué dispositivos tienen la mayor tasa de conversión?",
+      "success": true,
+      "execution_time": 12.78853726387024,
+      "cypher_generated": "MATCH (s:Session)\nOPTIONAL MATCH (s)-[:CONVERSION_REALIZADA]->(c:Conversion)\nWITH s.device AS device, count(s) AS totalSessions, count(c) AS convertingSessions\nWHERE totalSessions > 0\nWITH device, totalSessions, convertingSessions, (toFloat(convertingSessions) / totalSessions) * 100 AS conversionRate\nRETURN\n  device,\n  totalSessions,\n  convertingSessions,\n  round(conversionRate, 2) AS conversionRatePercentage\nORDER BY\n  conversionRatePercentage DESC",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'device': 'desktop', 'totalSessions': 276, 'convertingSessions': 183, 'conversionRatePercentage': 66.3}, {'device': 'mobile', 'totalSessions': 254, 'convertingSessions': 159, 'conversionRatePercenta",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (s:Session)\nOPTIONAL MATCH (s)-[:CONVERSION_REALIZADA]->(c:Conversion)\nWITH s.device AS device, count(s) AS totalSessions, count(c) AS convertingSessions\nWHERE totalSessions > 0\nWITH device, totalSessions, convertingSessions, (toFloat(convertingSessions) / totalSessions) * 100 AS conversionRate\nRETURN\n  device,\n  totalSessions,\n  convertingSessions,\n  round(conversionRate, 2) AS conversionRatePercentage\nORDER BY\n  conversionRatePercentage DESC",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "temporal_01",
+      "category": "temporal",
+      "question": "¿Cuántos usuarios se registraron en los últimos 30 días?",
+      "success": true,
+      "execution_time": 10.263772010803223,
+      "cypher_generated": "MATCH (u:User)\nWHERE u.registration_date >= datetime() - duration('P30D')\nRETURN count(u) AS total_usuarios_registrados_ultimos_30_dias",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'total_usuarios_registrados_ultimos_30_dias': 8}]",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (u:User)\nWHERE u.registration_date >= datetime() - duration('P30D')\nRETURN count(u) AS total_usuarios_registrados_ultimos_30_dias",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "temporal_02",
+      "category": "temporal",
+      "question": "¿Cuál es la tendencia de conversiones por mes?",
+      "success": true,
+      "execution_time": 8.986221075057983,
+      "cypher_generated": "MATCH (c:Conversion)\nWITH c.timestamp.year AS anio, c.timestamp.month AS mes, count(c) AS total_conversiones\nRETURN anio, mes, total_conversiones\nORDER BY anio, mes",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'anio': 2024, 'mes': 11, 'total_conversiones': 5}, {'anio': 2024, 'mes': 12, 'total_conversiones': 36}, {'anio': 2025, 'mes': 1, 'total_conversiones': 25}, {'anio': 2025, 'mes': 2, 'total_conversion",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (c:Conversion)\nWITH c.timestamp.year AS anio, c.timestamp.month AS mes, count(c) AS total_conversiones\nRETURN anio, mes, total_conversiones\nORDER BY anio, mes",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "attr_01",
+      "category": "atributos",
+      "question": "¿De qué ciudades son los usuarios?",
+      "success": true,
+      "execution_time": 14.173667669296265,
+      "cypher_generated": "MATCH (u:User)\nWHERE u.city IS NOT NULL\nRETURN u.city AS Ciudad, count(u) AS TotalUsuarios\nORDER BY TotalUsuarios DESC\nLIMIT 10",
+      "attempts": 2,
+      "error": "",
+      "result_sample": "[{'Ciudad': 'Valladolid', 'TotalUsuarios': 5}, {'Ciudad': 'Castellón', 'TotalUsuarios': 4}, {'Ciudad': 'Cuenca', 'TotalUsuarios': 4}, {'Ciudad': 'Sevilla', 'TotalUsuarios': 4}, {'Ciudad': 'Ceuta', 'To",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "Para obtener un recuento de usuarios por cada ciudad y ordenarlos de mayor a menor, puedes usar la siguiente consulta:\n\nMATCH (u:User)\nWHERE u.city IS NOT NULL\nRETURN u.city AS Ciudad, count(u) AS TotalUsuarios\nORDER BY TotalUsuarios DESC\nLIMIT 10",
+          "status": "failed",
+          "error": "{code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input 'Para': expected 'ALTER', 'ORDER BY', 'CALL', 'USING PERIODIC COMMIT', 'CREATE', 'LOAD CSV', 'START DATABASE', 'STOP DATABASE', 'DEALLOCATE', 'DELETE', 'DENY', 'DETACH', 'DROP', 'DRYRUN', 'FINISH', 'FOREACH', 'GRANT', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REALLOCATE', 'REMOVE', 'RENAME', 'RETURN', 'REVOKE', 'ENABLE SERVER', 'SET', 'SHOW', 'SKIP', 'TERMINATE', 'UNWIND', 'USE' or 'WITH' (line 1, column 9 (offset: 8))\n\"EXPLAIN Para obtener un recuento de usuarios por cada ciudad y ordenarlos de mayor a menor, puedes usar la siguiente consulta:\"\n         ^}"
+        },
+        {
+          "attempt": 2,
+          "cypher": "MATCH (u:User)\nWHERE u.city IS NOT NULL\nRETURN u.city AS Ciudad, count(u) AS TotalUsuarios\nORDER BY TotalUsuarios DESC\nLIMIT 10",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "attr_02",
+      "category": "atributos",
+      "question": "¿Qué tipos de dispositivos usan los visitantes?",
+      "success": true,
+      "execution_time": 19.20600414276123,
+      "cypher_generated": "MATCH (v:Visitor)-[:INICIO_SESION]->(s:Session)\nRETURN s.device AS tipoDispositivo, count(s) AS totalSesiones\nORDER BY totalSesiones DESC",
+      "attempts": 2,
+      "error": "",
+      "result_sample": "[{'tipoDispositivo': 'desktop', 'totalSesiones': 221}, {'tipoDispositivo': 'mobile', 'totalSesiones': 202}, {'tipoDispositivo': 'tablet', 'totalSesiones': 77}]",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "Claro, aquí tienes la consulta Cypher para analizar los dispositivos utilizados por los visitantes.\n\n### EXPLICACIÓN DE LA LÓGICA:\nPara responder a tu pregunta, necesitamos encontrar todas las sesiones y agruparlas por el tipo de dispositivo registrado en cada una. La consulta busca el patrón de un `:Visitor` que inicia una `:Session` y luego cuenta cuántas sesiones hay para cada valor de la propiedad `device`. Esto nos dará una distribución completa del uso de dispositivos en todo el sitio.\n\n### CONSULTA CYPHER:\nMATCH (v:Visitor)-[:INICIO_SESION]->(s:Session)\nRETURN s.device AS tipoDispositivo, count(s) AS totalSesiones\nORDER BY totalSesiones DESC",
+          "status": "failed",
+          "error": "{code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input 'Claro': expected 'ALTER', 'ORDER BY', 'CALL', 'USING PERIODIC COMMIT', 'CREATE', 'LOAD CSV', 'START DATABASE', 'STOP DATABASE', 'DEALLOCATE', 'DELETE', 'DENY', 'DETACH', 'DROP', 'DRYRUN', 'FINISH', 'FOREACH', 'GRANT', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REALLOCATE', 'REMOVE', 'RENAME', 'RETURN', 'REVOKE', 'ENABLE SERVER', 'SET', 'SHOW', 'SKIP', 'TERMINATE', 'UNWIND', 'USE' or 'WITH' (line 1, column 9 (offset: 8))\n\"EXPLAIN Claro, aquí tienes la consulta Cypher para analizar los dispositivos utilizados por los visitantes.\"\n         ^}"
+        },
+        {
+          "attempt": 2,
+          "cypher": "MATCH (v:Visitor)-[:INICIO_SESION]->(s:Session)\nRETURN s.device AS tipoDispositivo, count(s) AS totalSesiones\nORDER BY totalSesiones DESC",
+          "status": "success"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "timestamp": "2025-11-29T18:40:25.393676",
+    "model": "models/gemini-2.5-pro",
+    "embedding_model": "models/text-embedding-004",
+    "neo4j_url": "neo4j+s://ce30717d.databases.neo4j.io"
+  }
+}

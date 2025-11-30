@@ -1,0 +1,555 @@
+{
+  "summary": {
+    "total_tests": 20,
+    "successful": 19,
+    "failed": 1,
+    "success_rate": 0.95,
+    "avg_execution_time": 33.8396735906601
+  },
+  "by_difficulty": {
+    "hard": {
+      "total": 7,
+      "success": 7,
+      "avg_time": 35.11404194150652,
+      "success_rate": 1.0
+    },
+    "very_hard": {
+      "total": 8,
+      "success": 8,
+      "avg_time": 32.16093870997429,
+      "success_rate": 1.0
+    },
+    "extreme": {
+      "total": 5,
+      "success": 4,
+      "avg_time": 34.74153370857239,
+      "success_rate": 0.8
+    }
+  },
+  "by_category": {
+    "agregacion_multinivel": {
+      "total": 3,
+      "success": 3,
+      "avg_time": 21.794033686319988,
+      "success_rate": 1.0
+    },
+    "analisis_rutas": {
+      "total": 3,
+      "success": 3,
+      "avg_time": 22.16180165608724,
+      "success_rate": 1.0
+    },
+    "funnel_conversion": {
+      "total": 2,
+      "success": 2,
+      "avg_time": 50.20797562599182,
+      "success_rate": 1.0
+    },
+    "temporal_complejo": {
+      "total": 3,
+      "success": 3,
+      "avg_time": 19.607680241266888,
+      "success_rate": 1.0
+    },
+    "ambiguedad": {
+      "total": 3,
+      "success": 2,
+      "avg_time": 60.697213888168335,
+      "success_rate": 0.6666666666666666
+    },
+    "negacion": {
+      "total": 2,
+      "success": 2,
+      "avg_time": 19.846662163734436,
+      "success_rate": 1.0
+    },
+    "segmentacion": {
+      "total": 2,
+      "success": 2,
+      "avg_time": 31.97091257572174,
+      "success_rate": 1.0
+    },
+    "multi_concepto": {
+      "total": 2,
+      "success": 2,
+      "avg_time": 49.98009133338928,
+      "success_rate": 1.0
+    }
+  },
+  "test_results": [
+    {
+      "test_id": "stress_agg_01",
+      "category": "agregacion_multinivel",
+      "difficulty": "hard",
+      "question": "¿Cuál es el promedio de eventos por sesión para usuarios que han realizado al menos una conversión, agrupado por ciudad y dispositivo?",
+      "success": true,
+      "execution_time": 18.770972728729248,
+      "cypher_generated": "MATCH (user:User)-[:REALIZO]->(session:Session)\nWHERE EXISTS {\n  (user)-[:REALIZO]->(:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\n}\nWITH user.city AS ciudad, session.device AS dispositivo, session\nMATCH (session)-[:CONTIENE]->(event:Event)\nWITH ciudad, dispositivo, session, count(event) AS eventos_por_sesion\nRETURN ciudad, dispositivo, toFloat(sum(eventos_por_sesion)) / toFloat(count(session)) AS promedio_eventos_por_sesion\nORDER BY ciudad, promedio_eventos_por_sesion DESC",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'ciudad': 'Almería', 'dispositivo': 'desktop', 'promedio_eventos_por_sesion': 9.0}, {'ciudad': 'Asturias', 'dispositivo': 'desktop', 'promedio_eventos_por_sesion': 9.666666666666666}, {'ciudad': 'As",
+      "notes": "Requiere múltiples niveles de agregación y filtrado",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (user:User)-[:REALIZO]->(session:Session)\nWHERE EXISTS {\n  (user)-[:REALIZO]->(:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\n}\nWITH user.city AS ciudad, session.device AS dispositivo, session\nMATCH (session)-[:CONTIENE]->(event:Event)\nWITH ciudad, dispositivo, session, count(event) AS eventos_por_sesion\nRETURN ciudad, dispositivo, toFloat(sum(eventos_por_sesion)) / toFloat(count(session)) AS promedio_eventos_por_sesion\nORDER BY ciudad, promedio_eventos_por_sesion DESC",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "stress_agg_02",
+      "category": "agregacion_multinivel",
+      "difficulty": "very_hard",
+      "question": "De los visitantes que se convirtieron en usuarios, ¿cuántas sesiones promedio tuvieron antes y después de su identificación?",
+      "success": true,
+      "execution_time": 17.96445918083191,
+      "cypher_generated": "// Primero, identificamos a los usuarios que tienen un historial como visitante.\n// Luego, para cada uno, contamos las sesiones vinculadas a su perfil de visitante (antes del registro).\n// Y por separado, contamos las sesiones vinculadas a su perfil de usuario (después del registro).\n// Finalmente, calculamos el promedio de ambos conteos.\nMATCH (v:Visitor)-[:IDENTIFIED_AS]->(u:User)\n// Usamos OPTIONAL MATCH para incluir usuarios que no tengan sesiones antes o después, y no romper el cálculo.\nOPTIONAL MATCH (v)-[:INICIO_SESION]->(s_before:Session)\nOPTIONAL MATCH (u)-[:REALIZO]->(s_after:Session)\n// Agrupamos por usuario para contar sus sesiones antes y después individualmente.\nWITH u, count(DISTINCT s_before) AS sessions_before, count(DISTINCT s_after) AS sessions_after\n// Calculamos el promedio de las listas de conteos generadas.\nRETURN\n  avg(sessions_before) AS promedio_sesiones_antes_registro,\n  avg(sessions_after) AS promedio_sesiones_despues_registro",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'promedio_sesiones_antes_registro': 2.527472527472527, 'promedio_sesiones_despues_registro': 2.3406593406593412}]",
+      "notes": "Requiere partición temporal basada en evento de identificación",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "// Primero, identificamos a los usuarios que tienen un historial como visitante.\n// Luego, para cada uno, contamos las sesiones vinculadas a su perfil de visitante (antes del registro).\n// Y por separado, contamos las sesiones vinculadas a su perfil de usuario (después del registro).\n// Finalmente, calculamos el promedio de ambos conteos.\nMATCH (v:Visitor)-[:IDENTIFIED_AS]->(u:User)\n// Usamos OPTIONAL MATCH para incluir usuarios que no tengan sesiones antes o después, y no romper el cálculo.\nOPTIONAL MATCH (v)-[:INICIO_SESION]->(s_before:Session)\nOPTIONAL MATCH (u)-[:REALIZO]->(s_after:Session)\n// Agrupamos por usuario para contar sus sesiones antes y después individualmente.\nWITH u, count(DISTINCT s_before) AS sessions_before, count(DISTINCT s_after) AS sessions_after\n// Calculamos el promedio de las listas de conteos generadas.\nRETURN\n  avg(sessions_before) AS promedio_sesiones_antes_registro,\n  avg(sessions_after) AS promedio_sesiones_despues_registro",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "stress_agg_03",
+      "category": "agregacion_multinivel",
+      "difficulty": "extreme",
+      "question": "¿Cuál es la tasa de conversión por cohorte mensual de registro, considerando solo conversiones que ocurrieron dentro de los primeros 30 días?",
+      "success": true,
+      "execution_time": 28.646669149398804,
+      "cypher_generated": "MATCH (u:User)\nWITH date.truncate('month', u.registration_date) AS cohorte, u\n\n// Para cada usuario, buscamos opcionalmente si realizó una conversión\n// dentro de los 30 días posteriores a su fecha de registro.\n// La ruta completa (User -> Visitor -> Session -> Conversion) asegura capturar todo el historial.\nOPTIONAL MATCH (u)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\nWHERE duration.between(u.registration_date, c.timestamp).days <= 30\n\n// Agrupamos por cohorte y por usuario para determinar si cada usuario convirtió (al menos una vez).\n// Contar 'c' nos dirá si se encontró una conversión para ese usuario.\nWITH cohorte, u, count(c) > 0 AS ha_convertido\n\n// Finalmente, agrupamos por cohorte para obtener los totales.\n// Contamos todos los usuarios para el denominador.\n// Sumamos 1 por cada usuario que sí convirtió para el numerador.\nWITH cohorte,\n     count(u) AS total_usuarios,\n     sum(CASE WHEN ha_convertido THEN 1 ELSE 0 END) AS usuarios_conversores\nRETURN\n  cohorte,\n  total_usuarios,\n  usuarios_conversores,\n  round(toFloat(usuarios_conversores) / total_usuarios * 100.0, 2) AS tasa_conversion_porcentaje\nORDER BY cohorte ASC",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'cohorte': neo4j.time.Date(2024, 12, 1), 'total_usuarios': 11, 'usuarios_conversores': 9, 'tasa_conversion_porcentaje': 81.82}, {'cohorte': neo4j.time.Date(2025, 1, 1), 'total_usuarios': 13, 'usuari",
+      "notes": "Requiere análisis de cohortes con ventanas temporales",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (u:User)\nWITH date.truncate('month', u.registration_date) AS cohorte, u\n\n// Para cada usuario, buscamos opcionalmente si realizó una conversión\n// dentro de los 30 días posteriores a su fecha de registro.\n// La ruta completa (User -> Visitor -> Session -> Conversion) asegura capturar todo el historial.\nOPTIONAL MATCH (u)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\nWHERE duration.between(u.registration_date, c.timestamp).days <= 30\n\n// Agrupamos por cohorte y por usuario para determinar si cada usuario convirtió (al menos una vez).\n// Contar 'c' nos dirá si se encontró una conversión para ese usuario.\nWITH cohorte, u, count(c) > 0 AS ha_convertido\n\n// Finalmente, agrupamos por cohorte para obtener los totales.\n// Contamos todos los usuarios para el denominador.\n// Sumamos 1 por cada usuario que sí convirtió para el numerador.\nWITH cohorte,\n     count(u) AS total_usuarios,\n     sum(CASE WHEN ha_convertido THEN 1 ELSE 0 END) AS usuarios_conversores\nRETURN\n  cohorte,\n  total_usuarios,\n  usuarios_conversores,\n  round(toFloat(usuarios_conversores) / total_usuarios * 100.0, 2) AS tasa_conversion_porcentaje\nORDER BY cohorte ASC",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "stress_path_01",
+      "category": "analisis_rutas",
+      "difficulty": "hard",
+      "question": "¿Cuántos pasos promedio hay entre la primera sesión de un visitante y su primera conversión?",
+      "success": true,
+      "execution_time": 26.387736320495605,
+      "cypher_generated": "MATCH (v:Visitor)-[:IDENTIFIED_AS]->(u:User)\nWHERE EXISTS {\n  (u)-[:REALIZO]->(:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\n}\nWITH u, v\n\n// Recolectar todas las sesiones del historial completo (anónimo + registrado)\nCALL {\n    WITH u, v\n    MATCH (v)-[:INICIO_SESION]->(s1:Session)\n    RETURN s1 AS session\n    UNION\n    WITH u, v\n    MATCH (u)-[:REALIZO]->(s2:Session)\n    RETURN s2 AS session\n}\nWITH u, collect(session) AS allSessions\n\n// Encontrar la fecha de la primera sesión y la primera conversión\nWITH u, allSessions, min([s IN allSessions | s.date]) AS firstSessionDate\nMATCH (u)-[:REALIZO]->(cs:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\nWITH allSessions, firstSessionDate, min(cs.date) AS firstConversionDate\n\n// Contar las sesiones que ocurrieron entre la primera sesión y la primera conversión (inclusive)\nWITH size([s IN allSessions WHERE s.date >= firstSessionDate AND s.date <= firstConversionDate]) AS sessionCount\n\n// Calcular el promedio de esos conteos\nRETURN avg(sessionCount) AS promedioSesionesHastaConversion",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'promedioSesionesHastaConversion': 0.0}]",
+      "notes": "Requiere cálculo de longitud de path",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (v:Visitor)-[:IDENTIFIED_AS]->(u:User)\nWHERE EXISTS {\n  (u)-[:REALIZO]->(:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\n}\nWITH u, v\n\n// Recolectar todas las sesiones del historial completo (anónimo + registrado)\nCALL {\n    WITH u, v\n    MATCH (v)-[:INICIO_SESION]->(s1:Session)\n    RETURN s1 AS session\n    UNION\n    WITH u, v\n    MATCH (u)-[:REALIZO]->(s2:Session)\n    RETURN s2 AS session\n}\nWITH u, collect(session) AS allSessions\n\n// Encontrar la fecha de la primera sesión y la primera conversión\nWITH u, allSessions, min([s IN allSessions | s.date]) AS firstSessionDate\nMATCH (u)-[:REALIZO]->(cs:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\nWITH allSessions, firstSessionDate, min(cs.date) AS firstConversionDate\n\n// Contar las sesiones que ocurrieron entre la primera sesión y la primera conversión (inclusive)\nWITH size([s IN allSessions WHERE s.date >= firstSessionDate AND s.date <= firstConversionDate]) AS sessionCount\n\n// Calcular el promedio de esos conteos\nRETURN avg(sessionCount) AS promedioSesionesHastaConversion",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "stress_path_02",
+      "category": "analisis_rutas",
+      "difficulty": "very_hard",
+      "question": "¿Qué secuencia de tipos de eventos (page_view, click, etc.) es más probable que lleve a una conversión, considerando los 5 eventos previos?",
+      "success": true,
+      "execution_time": 19.93347954750061,
+      "cypher_generated": "MATCH (session:Session)-[:CONVERSION_REALIZADA]->(conversion:Conversion)\nMATCH (session)-[:CONTIENE]->(event:Event)\nWHERE event.timestamp < conversion.timestamp\nWITH session, event ORDER BY event.timestamp DESC\nLIMIT 5\nWITH session, collect(event.name) AS event_names_reversed\nWITH reverse(event_names_reversed) AS sequence\nRETURN sequence, count(sequence) AS frequency\nORDER BY frequency DESC\nLIMIT 10",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'sequence': ['page_view', 'page_view'], 'frequency': 2}, {'sequence': ['page_view'], 'frequency': 1}]",
+      "notes": "Requiere análisis de secuencias y patrones",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (session:Session)-[:CONVERSION_REALIZADA]->(conversion:Conversion)\nMATCH (session)-[:CONTIENE]->(event:Event)\nWHERE event.timestamp < conversion.timestamp\nWITH session, event ORDER BY event.timestamp DESC\nLIMIT 5\nWITH session, collect(event.name) AS event_names_reversed\nWITH reverse(event_names_reversed) AS sequence\nRETURN sequence, count(sequence) AS frequency\nORDER BY frequency DESC\nLIMIT 10",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "stress_path_03",
+      "category": "analisis_rutas",
+      "difficulty": "extreme",
+      "question": "Identifica usuarios que visitaron desde mobile, luego desktop, y finalmente convirtieron desde mobile nuevamente",
+      "success": true,
+      "execution_time": 20.164189100265503,
+      "cypher_generated": "MATCH (u:User)<-[:IDENTIFIED_AS]-(v:Visitor),\n      (v)-[:INICIO_SESION]->(s1:Session),\n      (v)-[:INICIO_SESION]->(s2:Session),\n      (v)-[:INICIO_SESION]->(s3:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\nWHERE s1.device = 'mobile' \n  AND s2.device = 'desktop' \n  AND s3.device = 'mobile'\n  AND s1.date < s2.date < s3.date\nRETURN DISTINCT u.user_id, u.first_name, u.last_name, u.email",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[]",
+      "notes": "Requiere pattern matching de secuencias específicas",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (u:User)<-[:IDENTIFIED_AS]-(v:Visitor),\n      (v)-[:INICIO_SESION]->(s1:Session),\n      (v)-[:INICIO_SESION]->(s2:Session),\n      (v)-[:INICIO_SESION]->(s3:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\nWHERE s1.device = 'mobile' \n  AND s2.device = 'desktop' \n  AND s3.device = 'mobile'\n  AND s1.date < s2.date < s3.date\nRETURN DISTINCT u.user_id, u.first_name, u.last_name, u.email",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "stress_funnel_01",
+      "category": "funnel_conversion",
+      "difficulty": "hard",
+      "question": "¿Cuál es la tasa de abandono en cada paso del funnel: visita → sesión con eventos → sesión con más de 3 eventos → conversión?",
+      "success": true,
+      "execution_time": 78.72885751724243,
+      "cypher_generated": "// Paso 1: Contar el total de visitantes únicos como base del funnel.\nWITH 1 AS dummy\nCALL {\n    MATCH (v:Visitor)\n    RETURN count(v) AS step1_visitors\n}\n// Paso 2: Contar las sesiones que tienen al menos un evento.\nCALL {\n    MATCH (s:Session)\n    WHERE EXISTS((s)-[:CONTIENE]->(:Event))\n    RETURN count(s) AS step2_sessionsWithEvents\n}\n// Paso 3: Contar las sesiones que tienen más de 3 eventos.\nCALL {\n    MATCH (s:Session)\n    WHERE COUNT {(s)-[:CONTIENE]->(:Event)} > 3\n    RETURN count(s) AS step3_sessionsWithMoreThan3Events\n}\n// Paso 4: Contar las sesiones que resultaron en una conversión.\nCALL {\n    MATCH (s:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\n    RETURN count(s) AS step4_conversions\n}\n// Calcular y devolver los resultados del funnel y las tasas de abandono.\nRETURN\n  step1_visitors AS total_visitantes,\n  step2_sessionsWithEvents AS sesiones_con_eventos,\n  step3_sessionsWithMoreThan3Events AS sesiones_con_mas_de_3_eventos,\n  step4_conversions AS conversiones,\n  round(100.0 * (step1_visitors - step2_sessionsWithEvents) / step1_visitors, 2) AS abandono_visita_a_sesion_porc,\n  round(100.0 * (step2_sessionsWithEvents - step3_sessionsWithMoreThan3Events) / step2_sessionsWithEvents, 2) AS abandono_sesion_a_sesion_activa_porc,\n  round(100.0 * (step3_sessionsWithMoreThan3Events - step4_conversions) / step3_sessionsWithMoreThan3Events, 2) AS abandono_sesion_activa_a_conversion_porc",
+      "attempts": 3,
+      "error": "",
+      "result_sample": "[{'total_visitantes': 361, 'sesiones_con_eventos': 500, 'sesiones_con_mas_de_3_eventos': 500, 'conversiones': 381, 'abandono_visita_a_sesion_porc': -38.5, 'abandono_sesion_a_sesion_activa_porc': 0.0, ",
+      "notes": "Requiere construcción de funnel con drop-off rates",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "Claro, aquí tienes la consulta Cypher para analizar el funnel y su tasa de abandono en cada paso.\n\n### EXPLICACIÓN DE LA CONSULTA:\nEsta consulta calcula el número de entidades en cada etapa del funnel que has definido. Primero, obtenemos los recuentos absolutos de cada paso y luego, en la cláusula `RETURN`, calculamos la tasa de abandono entre pasos consecutivos. La fórmula para el abandono es `(Paso_Anterior - Paso_Actual) / Paso_Anterior`.\n\n1.  **`step1_visitors`**: Contamos todos los nodos `:Visitor` únicos. Este es el 100% de nuestro funnel.\n2.  **`step2_sessionsWithEvents`**: Contamos las sesiones que tienen al menos un evento. Usamos `WHERE EXISTS(...)` porque es una forma muy eficiente de verificar la existencia de una relación sin tener que contar todos los eventos.\n3.  **`step3_sessionsWithMoreThan3Events`**: Filtramos las sesiones del paso anterior para quedarnos solo con aquellas que tienen más de 3 eventos. Usamos la función `size()` sobre un patrón de relación, que es la forma óptima de contar relaciones para un nodo específico.\n4.  **`step4_conversions`**: Contamos las sesiones que tienen una relación directa con un nodo `:Conversion`. Este es el final exitoso de nuestro funnel.\n5.  **`RETURN`**: Presentamos los conteos de cada paso y calculamos el porcentaje de abandono entre cada etapa consecutiva, multiplicando por `100.0` para asegurar un resultado decimal preciso.\n\n### CONSULTA CYPHER:\n\n// Paso 1: Contar el total de visitantes únicos como base del funnel.\nMATCH (v:Visitor)\nWITH count(v) AS step1_visitors\n\n// Paso 2: Contar las sesiones que tienen al menos un evento.\nMATCH (s1:Session)\nWHERE EXISTS((s1)-[:CONTIENE]->(:Event))\nWITH step1_visitors, count(s1) AS step2_sessionsWithEvents\n\n// Paso 3: Contar las sesiones que tienen más de 3 eventos.\nMATCH (s2:Session)\nWHERE size([(s2)-[:CONTIENE]->(e) | e]) > 3\nWITH step1_visitors, step2_sessionsWithEvents, count(s2) AS step3_sessionsWithMoreThan3Events\n\n// Paso 4: Contar las sesiones que resultaron en una conversión.\nMATCH (s3:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\nWITH step1_visitors, step2_sessionsWithEvents, step3_sessionsWithMoreThan3Events, count(s3) AS step4_conversions\n\n// Calcular y devolver los resultados del funnel y las tasas de abandono.\nRETURN\n  step1_visitors AS total_visitantes,\n  step2_sessionsWithEvents AS sesiones_con_eventos,\n  step3_sessionsWithMoreThan3Events AS sesiones_con_mas_de_3_eventos,\n  step4_conversions AS conversiones,\n  round(100.0 * (step1_visitors - step2_sessionsWithEvents) / step1_visitors, 2) AS abandono_paso1_a_paso2_porc,\n  round(100.0 * (step2_sessionsWithEvents - step3_sessionsWithMoreThan3Events) / step2_sessionsWithEvents, 2) AS abandono_paso2_a_paso3_porc,\n  round(100.0 * (step3_sessionsWithMoreThan3Events - step4_conversions) / step3_sessionsWithMoreThan3Events, 2) AS abandono_paso3_a_paso4_porc",
+          "status": "failed",
+          "error": "{code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input 'Claro': expected 'ALTER', 'ORDER BY', 'CALL', 'USING PERIODIC COMMIT', 'CREATE', 'LOAD CSV', 'START DATABASE', 'STOP DATABASE', 'DEALLOCATE', 'DELETE', 'DENY', 'DETACH', 'DROP', 'DRYRUN', 'FINISH', 'FOREACH', 'GRANT', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REALLOCATE', 'REMOVE', 'RENAME', 'RETURN', 'REVOKE', 'ENABLE SERVER', 'SET', 'SHOW', 'SKIP', 'TERMINATE', 'UNWIND', 'USE' or 'WITH' (line 1, column 9 (offset: 8))\n\"EXPLAIN Claro, aquí tienes la consulta Cypher para analizar el funnel y su tasa de abandono en cada paso.\"\n         ^}"
+        },
+        {
+          "attempt": 2,
+          "cypher": "// Paso 1: Contar el total de visitantes únicos como base del funnel.\nWITH 1 AS dummy\nCALL {\n    MATCH (v:Visitor)\n    RETURN count(v) AS step1_visitors\n}\n// Paso 2: Contar las sesiones que tienen al menos un evento.\nCALL {\n    MATCH (s:Session)\n    WHERE EXISTS((s)-[:CONTIENE]->(:Event))\n    RETURN count(s) AS step2_sessionsWithEvents\n}\n// Paso 3: Contar las sesiones que tienen más de 3 eventos.\nCALL {\n    MATCH (s:Session)\n    WHERE size((s)-[:CONTIENE]->(:Event)) > 3\n    RETURN count(s) AS step3_sessionsWithMoreThan3Events\n}\n// Paso 4: Contar las sesiones que resultaron en una conversión.\nCALL {\n    MATCH (s:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\n    RETURN count(s) AS step4_conversions\n}\n// Calcular y devolver los resultados del funnel y las tasas de abandono.\nRETURN\n  step1_visitors AS total_visitantes,\n  step2_sessionsWithEvents AS sesiones_con_eventos,\n  step3_sessionsWithMoreThan3Events AS sesiones_con_mas_de_3_eventos,\n  step4_conversions AS conversiones,\n  round(100.0 * (step1_visitors - step2_sessionsWithEvents) / step1_visitors, 2) AS abandono_visita_a_sesion_porc,\n  round(100.0 * (step2_sessionsWithEvents - step3_sessionsWithMoreThan3Events) / step2_sessionsWithEvents, 2) AS abandono_sesion_a_sesion_activa_porc,\n  round(100.0 * (step3_sessionsWithMoreThan3Events - step4_conversions) / step3_sessionsWithMoreThan3Events, 2) AS abandono_sesion_activa_a_conversion_porc",
+          "status": "failed",
+          "error": "{code: Neo.ClientError.Statement.SyntaxError} {message: A pattern expression should only be used in order to test the existence of a pattern. It can no longer be used inside the function size(), an alternative is to replace size() with COUNT {}. (line 16, column 16 (offset: 452))\n\"    WHERE size((s)-[:CONTIENE]->(:Event)) > 3\"\n                ^}"
+        },
+        {
+          "attempt": 3,
+          "cypher": "// Paso 1: Contar el total de visitantes únicos como base del funnel.\nWITH 1 AS dummy\nCALL {\n    MATCH (v:Visitor)\n    RETURN count(v) AS step1_visitors\n}\n// Paso 2: Contar las sesiones que tienen al menos un evento.\nCALL {\n    MATCH (s:Session)\n    WHERE EXISTS((s)-[:CONTIENE]->(:Event))\n    RETURN count(s) AS step2_sessionsWithEvents\n}\n// Paso 3: Contar las sesiones que tienen más de 3 eventos.\nCALL {\n    MATCH (s:Session)\n    WHERE COUNT {(s)-[:CONTIENE]->(:Event)} > 3\n    RETURN count(s) AS step3_sessionsWithMoreThan3Events\n}\n// Paso 4: Contar las sesiones que resultaron en una conversión.\nCALL {\n    MATCH (s:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\n    RETURN count(s) AS step4_conversions\n}\n// Calcular y devolver los resultados del funnel y las tasas de abandono.\nRETURN\n  step1_visitors AS total_visitantes,\n  step2_sessionsWithEvents AS sesiones_con_eventos,\n  step3_sessionsWithMoreThan3Events AS sesiones_con_mas_de_3_eventos,\n  step4_conversions AS conversiones,\n  round(100.0 * (step1_visitors - step2_sessionsWithEvents) / step1_visitors, 2) AS abandono_visita_a_sesion_porc,\n  round(100.0 * (step2_sessionsWithEvents - step3_sessionsWithMoreThan3Events) / step2_sessionsWithEvents, 2) AS abandono_sesion_a_sesion_activa_porc,\n  round(100.0 * (step3_sessionsWithMoreThan3Events - step4_conversions) / step3_sessionsWithMoreThan3Events, 2) AS abandono_sesion_activa_a_conversion_porc",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "stress_funnel_02",
+      "category": "funnel_conversion",
+      "difficulty": "very_hard",
+      "question": "¿En qué punto del customer journey (número de sesión) ocurren la mayoría de las conversiones?",
+      "success": true,
+      "execution_time": 21.68709373474121,
+      "cypher_generated": "MATCH (v:Visitor)-[:INICIO_SESION]->(converting_session:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\nWITH v, converting_session\nMATCH (v)-[:INICIO_SESION]->(all_sessions:Session)\nWHERE all_sessions.date <= converting_session.date\nWITH converting_session, count(all_sessions) AS session_number\nWITH session_number, count(converting_session) AS total_conversions\nRETURN session_number AS numero_de_sesion, total_conversions AS total_conversiones\nORDER BY total_conversiones DESC",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'numero_de_sesion': 1, 'total_conversiones': 119}, {'numero_de_sesion': 2, 'total_conversiones': 85}, {'numero_de_sesion': 3, 'total_conversiones': 28}, {'numero_de_sesion': 4, 'total_conversiones':",
+      "notes": "Requiere enumerar sesiones por usuario y analizar patrones",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (v:Visitor)-[:INICIO_SESION]->(converting_session:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\nWITH v, converting_session\nMATCH (v)-[:INICIO_SESION]->(all_sessions:Session)\nWHERE all_sessions.date <= converting_session.date\nWITH converting_session, count(all_sessions) AS session_number\nWITH session_number, count(converting_session) AS total_conversions\nRETURN session_number AS numero_de_sesion, total_conversions AS total_conversiones\nORDER BY total_conversiones DESC",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "stress_temporal_01",
+      "category": "temporal_complejo",
+      "difficulty": "hard",
+      "question": "¿Cuál es la diferencia en días promedio entre el registro de un usuario y su primera conversión?",
+      "success": true,
+      "execution_time": 15.991197109222412,
+      "cypher_generated": "MATCH (u:User)-[:REALIZO]->(:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\nWITH u, min(c.timestamp) AS primeraConversionTimestamp\nRETURN avg(duration.between(u.registration_date, primeraConversionTimestamp).days) AS diasPromedioHastaPrimeraConversion",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'diasPromedioHastaPrimeraConversion': 13.343750000000002}]",
+      "notes": "Requiere cálculo de diferencias temporales",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (u:User)-[:REALIZO]->(:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\nWITH u, min(c.timestamp) AS primeraConversionTimestamp\nRETURN avg(duration.between(u.registration_date, primeraConversionTimestamp).days) AS diasPromedioHastaPrimeraConversion",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "stress_temporal_02",
+      "category": "temporal_complejo",
+      "difficulty": "very_hard",
+      "question": "¿Qué día de la semana tiene la mayor tasa de conversión, considerando solo sesiones que comenzaron en horario laboral (9am-6pm)?",
+      "success": true,
+      "execution_time": 20.381134748458862,
+      "cypher_generated": "MATCH (s:Session)\nWHERE s.date.hour >= 9 AND s.date.hour < 18\nOPTIONAL MATCH (s)-[:CONVERSION_REALIZADA]->(c:Conversion)\nWITH s.date.dayOfWeek AS diaSemana,\n     count(DISTINCT s) AS totalSesiones,\n     count(c) AS sesionesConConversion\nWHERE totalSesiones > 0\nWITH totalSesiones,\n     sesionesConConversion,\n     CASE diaSemana\n       WHEN 1 THEN 'Lunes'\n       WHEN 2 THEN 'Martes'\n       WHEN 3 THEN 'Miércoles'\n       WHEN 4 THEN 'Jueves'\n       WHEN 5 THEN 'Viernes'\n       WHEN 6 THEN 'Sábado'\n       WHEN 7 THEN 'Domingo'\n     END AS nombreDia,\n     (toFloat(sesionesConConversion) / toFloat(totalSesiones)) * 100.0 AS tasaConversion\nRETURN nombreDia,\n       totalSesiones,\n       sesionesConConversion,\n       round(tasaConversion, 2) AS tasaConversionPorcentual\nORDER BY tasaConversionPorcentual DESC",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'nombreDia': 'Sábado', 'totalSesiones': 23, 'sesionesConConversion': 25, 'tasaConversionPorcentual': 108.7}, {'nombreDia': 'Martes', 'totalSesiones': 21, 'sesionesConConversion': 19, 'tasaConversion",
+      "notes": "Requiere extracción de día de semana y hora",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (s:Session)\nWHERE s.date.hour >= 9 AND s.date.hour < 18\nOPTIONAL MATCH (s)-[:CONVERSION_REALIZADA]->(c:Conversion)\nWITH s.date.dayOfWeek AS diaSemana,\n     count(DISTINCT s) AS totalSesiones,\n     count(c) AS sesionesConConversion\nWHERE totalSesiones > 0\nWITH totalSesiones,\n     sesionesConConversion,\n     CASE diaSemana\n       WHEN 1 THEN 'Lunes'\n       WHEN 2 THEN 'Martes'\n       WHEN 3 THEN 'Miércoles'\n       WHEN 4 THEN 'Jueves'\n       WHEN 5 THEN 'Viernes'\n       WHEN 6 THEN 'Sábado'\n       WHEN 7 THEN 'Domingo'\n     END AS nombreDia,\n     (toFloat(sesionesConConversion) / toFloat(totalSesiones)) * 100.0 AS tasaConversion\nRETURN nombreDia,\n       totalSesiones,\n       sesionesConConversion,\n       round(tasaConversion, 2) AS tasaConversionPorcentual\nORDER BY tasaConversionPorcentual DESC",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "stress_temporal_03",
+      "category": "temporal_complejo",
+      "difficulty": "extreme",
+      "question": "Identifica usuarios con comportamiento estacional: que tienen picos de actividad cada 7 días aproximadamente",
+      "success": true,
+      "execution_time": 22.450708866119385,
+      "cypher_generated": "MATCH (u:User)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(s:Session)\nWITH u, s.date AS sessionDate\nORDER BY sessionDate ASC\nWITH u, collect(sessionDate) AS sessionDates\nWHERE size(sessionDates) > 3\nWITH u, [i IN range(0, size(sessionDates) - 2) | duration.between(sessionDates[i], sessionDates[i+1]).days] AS diffsInDays\nUNWIND diffsInDays AS diff\nWITH u, avg(diff) AS avgDaysBetweenSessions, stdev(diff) AS stdevDays, count(diff) AS numberOfGaps\nWHERE 6.5 <= avgDaysBetweenSessions <= 7.5 AND stdevDays < 2.0\nRETURN\n  u.user_id AS userId,\n  u.first_name AS firstName,\n  u.last_name AS lastName,\n  round(avgDaysBetweenSessions, 2) AS avgDaysBetweenSessions,\n  round(stdevDays, 2) AS consistencyStDev,\n  numberOfGaps + 1 AS totalSessionsInPattern\nORDER BY\n  consistencyStDev ASC",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[]",
+      "notes": "Requiere análisis de periodicidad",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (u:User)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(s:Session)\nWITH u, s.date AS sessionDate\nORDER BY sessionDate ASC\nWITH u, collect(sessionDate) AS sessionDates\nWHERE size(sessionDates) > 3\nWITH u, [i IN range(0, size(sessionDates) - 2) | duration.between(sessionDates[i], sessionDates[i+1]).days] AS diffsInDays\nUNWIND diffsInDays AS diff\nWITH u, avg(diff) AS avgDaysBetweenSessions, stdev(diff) AS stdevDays, count(diff) AS numberOfGaps\nWHERE 6.5 <= avgDaysBetweenSessions <= 7.5 AND stdevDays < 2.0\nRETURN\n  u.user_id AS userId,\n  u.first_name AS firstName,\n  u.last_name AS lastName,\n  round(avgDaysBetweenSessions, 2) AS avgDaysBetweenSessions,\n  round(stdevDays, 2) AS consistencyStDev,\n  numberOfGaps + 1 AS totalSessionsInPattern\nORDER BY\n  consistencyStDev ASC",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "stress_ambig_01",
+      "category": "ambiguedad",
+      "difficulty": "hard",
+      "question": "¿Qué usuarios son más valiosos?",
+      "success": true,
+      "execution_time": 69.2357976436615,
+      "cypher_generated": "MATCH (u:User)\n// Usamos una subconsulta con CALL para unir los resultados de dos patrones de búsqueda distintos\nCALL {\n    WITH u\n    // Patrón 1: Encuentra conversiones de sesiones que el usuario realizó ESTANDO LOGUEADO.\n    MATCH (u)-[:REALIZO]->(:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\n    RETURN c\n    UNION\n    WITH u\n    // Patrón 2: Encuentra conversiones de sesiones ANÓNIMAS que se realizaron ANTES de que el visitante se identificara como este usuario.\n    MATCH (u)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\n    RETURN c\n}\n// Agrupamos por usuario y contamos el total de conversiones encontradas en ambos patrones.\nRETURN u.user_id, u.first_name, u.email, count(c) AS totalConversions\nORDER BY totalConversions DESC\nLIMIT 10",
+      "attempts": 3,
+      "error": "",
+      "result_sample": "[{'u.user_id': 'U-c50b6b6a', 'u.first_name': 'Jerónimo', 'u.email': 'maximianocarreras@example.net', 'totalConversions': 6}, {'u.user_id': 'U-00b69857', 'u.first_name': 'Alondra', 'u.email': 'cornelio",
+      "notes": "Ambiguo: ¿valiosos por conversiones? ¿por engagement? Requiere interpretación",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "Para determinar qué usuarios son más valiosos, definiremos \"valor\" como la cantidad total de conversiones (ventas) que un usuario ha generado a lo largo de toda su historia, incluyendo las sesiones anónimas antes de registrarse.\n\nEsta consulta encontrará a los 10 usuarios con más conversiones.\n\nMATCH (u:User)<-[:IDENTIFIED_AS]-(v:Visitor)-[:INICIO_SESION]->(s:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\nRETURN u.user_id, u.first_name, u.last_name, u.email, count(c) AS totalConversions\nORDER BY totalConversions DESC\nLIMIT 10",
+          "status": "failed",
+          "error": "{code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input 'Para': expected 'ALTER', 'ORDER BY', 'CALL', 'USING PERIODIC COMMIT', 'CREATE', 'LOAD CSV', 'START DATABASE', 'STOP DATABASE', 'DEALLOCATE', 'DELETE', 'DENY', 'DETACH', 'DROP', 'DRYRUN', 'FINISH', 'FOREACH', 'GRANT', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REALLOCATE', 'REMOVE', 'RENAME', 'RETURN', 'REVOKE', 'ENABLE SERVER', 'SET', 'SHOW', 'SKIP', 'TERMINATE', 'UNWIND', 'USE' or 'WITH' (line 1, column 9 (offset: 8))\n\"EXPLAIN Para determinar qué usuarios son más valiosos, definiremos \"valor\" como la cantidad total de conversiones (ventas) que un usuario ha generado a lo largo de toda su historia, incluyendo las sesiones anónimas antes de registrarse.\"\n         ^}"
+        },
+        {
+          "attempt": 2,
+          "cypher": "El error se debe a que incluiste texto explicativo que no es parte del lenguaje Cypher dentro de la consulta. Además, la lógica de la consulta original era incompleta, ya que solo contaba las conversiones de sesiones anónimas y omitía las que el usuario realizó después de iniciar sesión.\n\nLa siguiente consulta corregida y mejorada soluciona ambos problemas. Primero, une las dos rutas posibles hacia una conversión (anónima y logueada) para cada usuario, y luego cuenta el total de conversiones para obtener una visión completa de su valor.\n\nMATCH (u:User)\nCALL {\n    WITH u\n    // Ruta 1: Conversiones en sesiones donde el usuario estaba logueado\n    MATCH (u)-[:REALIZO]->(s:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\n    RETURN c\n    UNION\n    WITH u\n    // Ruta 2: Conversiones en sesiones anónimas antes de registrarse\n    MATCH (u)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(s:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\n    RETURN c\n}\nRETURN u.user_id, u.first_name, u.email, count(c) AS totalConversions\nORDER BY totalConversions DESC\nLIMIT 10",
+          "status": "failed",
+          "error": "{code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input 'El': expected 'ALTER', 'ORDER BY', 'CALL', 'USING PERIODIC COMMIT', 'CREATE', 'LOAD CSV', 'START DATABASE', 'STOP DATABASE', 'DEALLOCATE', 'DELETE', 'DENY', 'DETACH', 'DROP', 'DRYRUN', 'FINISH', 'FOREACH', 'GRANT', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REALLOCATE', 'REMOVE', 'RENAME', 'RETURN', 'REVOKE', 'ENABLE SERVER', 'SET', 'SHOW', 'SKIP', 'TERMINATE', 'UNWIND', 'USE' or 'WITH' (line 1, column 9 (offset: 8))\n\"EXPLAIN El error se debe a que incluiste texto explicativo que no es parte del lenguaje Cypher dentro de la consulta. Además, la lógica de la consulta original era incompleta, ya que solo contaba las conversiones de sesiones anónimas y omitía las que el usuario realizó después de iniciar sesión.\"\n         ^}"
+        },
+        {
+          "attempt": 3,
+          "cypher": "MATCH (u:User)\n// Usamos una subconsulta con CALL para unir los resultados de dos patrones de búsqueda distintos\nCALL {\n    WITH u\n    // Patrón 1: Encuentra conversiones de sesiones que el usuario realizó ESTANDO LOGUEADO.\n    MATCH (u)-[:REALIZO]->(:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\n    RETURN c\n    UNION\n    WITH u\n    // Patrón 2: Encuentra conversiones de sesiones ANÓNIMAS que se realizaron ANTES de que el visitante se identificara como este usuario.\n    MATCH (u)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\n    RETURN c\n}\n// Agrupamos por usuario y contamos el total de conversiones encontradas en ambos patrones.\nRETURN u.user_id, u.first_name, u.email, count(c) AS totalConversions\nORDER BY totalConversions DESC\nLIMIT 10",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "stress_ambig_02",
+      "category": "ambiguedad",
+      "difficulty": "very_hard",
+      "question": "Muéstrame los usuarios problemáticos",
+      "success": true,
+      "execution_time": 39.72814393043518,
+      "cypher_generated": "MATCH (u:User)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(s:Session)\nWHERE NOT EXISTS {\n  MATCH (u)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\n}\nWITH u, count(s) AS totalSessions\nWHERE totalSessions > 2\nRETURN u.first_name AS nombre, u.last_name AS apellido, u.email, totalSessions AS sesiones_sin_conversion\nORDER BY sesiones_sin_conversion DESC\nLIMIT 10",
+      "attempts": 2,
+      "error": "",
+      "result_sample": "[{'nombre': 'Lupe', 'apellido': 'Torrecilla', 'u.email': 'goyomartin@example.org', 'sesiones_sin_conversion': 4}, {'nombre': 'Nicolás', 'apellido': 'Pinilla', 'u.email': 'marina64@example.org', 'sesio",
+      "notes": "Muy ambiguo: ¿problemáticos cómo? ¿muchas sesiones sin conversión? ¿bounce alto?",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "Claro. Para identificar \"usuarios problemáticos\", me centraré en aquellos que tienen un alto número de sesiones pero nunca han realizado una conversión. Esta es una métrica clave para detectar fricción en el proceso de compra o falta de interés en el producto.\n\nLa consulta buscará a todos los usuarios, contará la totalidad de sus sesiones (incluyendo las que realizaron como visitantes anónimos antes de registrarse) y luego filtrará para quedarse únicamente con aquellos que tienen cero conversiones, ordenándolos de mayor a menor número de sesiones.\n\nMATCH (u:User)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(s:Session)\nWITH u, count(s) AS totalSessions\nWHERE totalSessions > 2\nOPTIONAL MATCH (u)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\nWITH u, totalSessions, count(c) AS totalConversions\nWHERE totalConversions = 0\nRETURN u.first_name AS nombre, u.last_name AS apellido, u.email, totalSessions AS sesiones_sin_conversion\nORDER BY sesiones_sin_conversion DESC\nLIMIT 10",
+          "status": "failed",
+          "error": "{code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input 'Claro': expected 'ALTER', 'ORDER BY', 'CALL', 'USING PERIODIC COMMIT', 'CREATE', 'LOAD CSV', 'START DATABASE', 'STOP DATABASE', 'DEALLOCATE', 'DELETE', 'DENY', 'DETACH', 'DROP', 'DRYRUN', 'FINISH', 'FOREACH', 'GRANT', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REALLOCATE', 'REMOVE', 'RENAME', 'RETURN', 'REVOKE', 'ENABLE SERVER', 'SET', 'SHOW', 'SKIP', 'TERMINATE', 'UNWIND', 'USE' or 'WITH' (line 1, column 9 (offset: 8))\n\"EXPLAIN Claro. Para identificar \"usuarios problemáticos\", me centraré en aquellos que tienen un alto número de sesiones pero nunca han realizado una conversión. Esta es una métrica clave para detectar fricción en el proceso de compra o falta de interés en el producto.\"\n         ^}"
+        },
+        {
+          "attempt": 2,
+          "cypher": "MATCH (u:User)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(s:Session)\nWHERE NOT EXISTS {\n  MATCH (u)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\n}\nWITH u, count(s) AS totalSessions\nWHERE totalSessions > 2\nRETURN u.first_name AS nombre, u.last_name AS apellido, u.email, totalSessions AS sesiones_sin_conversion\nORDER BY sesiones_sin_conversion DESC\nLIMIT 10",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "stress_ambig_03",
+      "category": "ambiguedad",
+      "difficulty": "extreme",
+      "question": "¿Hay algún patrón raro en los datos?",
+      "success": false,
+      "execution_time": 73.12770009040833,
+      "cypher_generated": "Para una pregunta tan abierta, la mejor estrategia es plantear varias hipótesis sobre posibles anomalías en los datos y luego escribir una consulta para validar cada una. Aquí tienes varias consultas, cada una diseñada para detectar un tipo específico de patrón inusual.\n\n// Hipótesis 1: Un visitante anónimo está vinculado a múltiples usuarios registrados.\n// Esto es un fuerte indicador de un problema en la lógica de identificación de usuarios. Un solo `Visitor` (cookie/huella) no debería poder asociarse a más de una cuenta de `User`.\nMATCH (v:Visitor)-[:IDENTIFIED_AS]->(u:User)\nWITH v, collect(u.user_id) AS usuarios_asociados\nWHERE size(usuarios_asociados) > 1\nRETURN v.id AS visitor_id, usuarios_asociados;\n\n// Hipótesis 2: Hay sesiones con una actividad anormalmente alta (posibles bots).\n// Una sesión con muchísimos eventos en un corto período de tiempo puede ser un bot o un scraper. Buscaremos sesiones con más de 50 eventos, un umbral inicial que se puede ajustar.\nMATCH (s:Session)-[:CONTIENE]->(:Event)\nWITH s, count(*) AS numero_eventos\nWHERE numero_eventos > 50\nRETURN s.session_id, s.source, s.device, numero_eventos\nORDER BY numero_eventos DESC\nLIMIT 10;\n\n// Hipótesis 3: Cuantificar las conversiones realizadas por \"invitados\" vs. usuarios logueados.\n// Esto no es necesariamente un error, pero es un patrón de negocio crucial. Permite entender qué porcentaje de las ventas proviene de usuarios no registrados.\nMATCH (s:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\nOPTIONAL MATCH (u:User)-[:REALIZO]->(s)\nWITH count(s) AS total_conversiones, count(CASE WHEN u IS NULL THEN 1 END) AS conversiones_invitado\nRETURN\n  total_conversiones,\n  conversiones_invitado,\n  round(100.0 * conversiones_invitado / total_conversiones, 2) AS porcentaje_invitado;\n\n// Hipótesis 4: Existen usuarios que realizaron una conversión ANTES de su fecha de registro.\n// Esto es lógicamente imposible y señalaría un problema grave en la ingesta de datos o en la atribución de fechas. Se busca en el historial del visitante asociado al usuario.\nMATCH (u:User)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(s:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\nWHERE s.date < u.registration_date\nRETURN u.user_id, u.registration_date, s.session_id, s.date AS conversion_date\nLIMIT 25;\n\n// Hipótesis 5: Hay sesiones \"huérfanas\" que no provienen de ningún visitante.\n// Esto indicaría un problema grave en la ingesta de datos, ya que toda sesión debe ser iniciada por un visitante según el esquema.\nMATCH (s:Session)\nWHERE NOT EXISTS ((:Visitor)-[:INICIO_SESION]->(s))\nRETURN s.session_id, s.date, s.source\nLIMIT 100;",
+      "attempts": 3,
+      "error": "",
+      "result_sample": "Error procesando solicitud: No se pudo generar Cypher válido tras 3 intentos.",
+      "notes": "Extremadamente abierto, requiere análisis exploratorio",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "Claro. Una pregunta tan abierta como \"¿hay algún patrón raro?\" se traduce en varias hipótesis de negocio que podemos validar con Cypher. Un analista experto buscaría anomalías en la integridad de los datos, el comportamiento del usuario y los resultados de negocio.\n\nAquí tienes una serie de consultas para detectar patrones inusuales, basadas estrictamente en tu esquema.\n\n---\n\n### 1. Hipótesis: Un visitante anónimo está vinculado a múltiples usuarios registrados.\nEsto es un fuerte indicador de un problema en la lógica de identificación de usuarios. Un solo `Visitor` (cookie/huella) no debería poder asociarse a más de una cuenta de `User`.\n\nMATCH (v:Visitor)-[:IDENTIFIED_AS]->(u:User)\nWITH v, count(u) AS numero_de_usuarios\nWHERE numero_de_usuarios > 1\nMATCH (v)-[:IDENTIFIED_AS]->(user_final:User)\nRETURN v.id AS visitor_id, collect(user_final.user_id) AS usuarios_vinculados\n\n### 2. Hipótesis: Hay sesiones con una actividad anormalmente alta (posibles bots).\nUna sesión con muchísimos eventos en un corto período de tiempo puede ser un bot o un scraper. Buscaremos sesiones con más de 50 eventos.\n\nMATCH (s:Session)-[r:CONTIENE]->(e:Event)\nWITH s, count(r) AS numero_eventos\nWHERE numero_eventos > 50\nRETURN s.session_id, s.source, s.device, numero_eventos\nORDER BY numero_eventos DESC\nLIMIT 10\n\n### 3. Hipótesis: Hay conversiones que no están asociadas a ningún usuario logueado.\nEsto podría ser normal si permites \"compras como invitado\", pero es un patrón importante de cuantificar. Queremos saber qué porcentaje de las ventas son de invitados vs. usuarios registrados.\n\nMATCH (s:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\nWITH count(s) AS total_conversiones\nMATCH (s_invitado:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\nWHERE NOT EXISTS ((:User)-[:REALIZO]->(s_invitado))\nWITH total_conversiones, count(s_invitado) AS conversiones_invitado\nRETURN\n  total_conversiones,\n  conversiones_invitado,\n  round(100.0 * conversiones_invitado / total_conversiones, 2) AS porcentaje_invitado\n\n### 4. Hipótesis: Existen usuarios que se registraron pero nunca realizaron una conversión.\nEs común, pero analizar su origen puede revelar fuentes de tráfico que atraen a usuarios de baja calidad o con una intención no transaccional.\n\nMATCH (u:User)\nWHERE NOT EXISTS ((u)-[:IDENTIFIED_AS]<-()-[:INICIO_SESION]->()-[:CONVERSION_REALIZADA]->(:Conversion))\nAND NOT EXISTS ((u)-[:REALIZO]->()-[:CONVERSION_REALIZADA]->(:Conversion))\nRETURN u.user_id, u.registration_date, u.city\nLIMIT 25\n\n### 5. Hipótesis: Hay sesiones \"huérfanas\" que no provienen de ningún visitante.\nEsto indicaría un problema grave en la ingesta de datos, ya que toda sesión debe ser iniciada por un visitante.\n\nMATCH (s:Session)\nWHERE NOT EXISTS ((:Visitor)-[:INICIO_SESION]->(s))\nRETURN s.session_id, s.date, s.source\nLIMIT 100",
+          "status": "failed",
+          "error": "{code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input 'Claro': expected 'ALTER', 'ORDER BY', 'CALL', 'USING PERIODIC COMMIT', 'CREATE', 'LOAD CSV', 'START DATABASE', 'STOP DATABASE', 'DEALLOCATE', 'DELETE', 'DENY', 'DETACH', 'DROP', 'DRYRUN', 'FINISH', 'FOREACH', 'GRANT', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REALLOCATE', 'REMOVE', 'RENAME', 'RETURN', 'REVOKE', 'ENABLE SERVER', 'SET', 'SHOW', 'SKIP', 'TERMINATE', 'UNWIND', 'USE' or 'WITH' (line 1, column 9 (offset: 8))\n\"EXPLAIN Claro. Una pregunta tan abierta como \"¿hay algún patrón raro?\" se traduce en varias hipótesis de negocio que podemos validar con Cypher. Un analista experto buscaría anomalías en la integridad de los datos, el comportamiento del usuario y los resultados de negocio.\"\n         ^}"
+        },
+        {
+          "attempt": 2,
+          "cypher": "// Hipótesis 1: Un visitante anónimo está vinculado a múltiples usuarios registrados.\n// Esto es un fuerte indicador de un problema en la lógica de identificación de usuarios. Un solo `Visitor` (cookie/huella) no debería poder asociarse a más de una cuenta de `User`.\nMATCH (v:Visitor)-[:IDENTIFIED_AS]->(u:User)\nWITH v, count(u) AS numero_de_usuarios\nWHERE numero_de_usuarios > 1\nMATCH (v)-[:IDENTIFIED_AS]->(user_final:User)\nRETURN v.id AS visitor_id, collect(user_final.user_id) AS usuarios_vinculados;\n\n// Hipótesis 2: Hay sesiones con una actividad anormalmente alta (posibles bots).\n// Una sesión con muchísimos eventos en un corto período de tiempo puede ser un bot o un scraper. Buscaremos sesiones con más de 50 eventos.\nMATCH (s:Session)-[r:CONTIENE]->(:Event)\nWITH s, count(r) AS numero_eventos\nWHERE numero_eventos > 50\nRETURN s.session_id, s.source, s.device, numero_eventos\nORDER BY numero_eventos DESC\nLIMIT 10;\n\n// Hipótesis 3: Hay conversiones que no están asociadas a ningún usuario logueado.\n// Esto podría ser normal si se permiten \"compras como invitado\", pero es un patrón importante de cuantificar para entender el comportamiento de compra.\nMATCH (s:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\nWITH count(s) AS total_conversiones\nMATCH (s_invitado:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\nWHERE NOT EXISTS ((:User)-[:REALIZO]->(s_invitado))\nWITH total_conversiones, count(s_invitado) AS conversiones_invitado\nRETURN\n  total_conversiones,\n  conversiones_invitado,\n  round(100.0 * conversiones_invitado / total_conversiones, 2) AS porcentaje_invitado;\n\n// Hipótesis 4: Existen usuarios que realizaron una conversión ANTES de su fecha de registro.\n// Esto es lógicamente imposible y señalaría un problema grave en la ingesta de datos o en la atribución de fechas.\nMATCH (u:User)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(s:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\nWHERE s.date < u.registration_date\nRETURN u.user_id, u.registration_date, s.session_id, s.date AS conversion_date\nLIMIT 25;\n\n// Hipótesis 5: Hay sesiones \"huérfanas\" que no provienen de ningún visitante.\n// Esto indicaría un problema grave en la ingesta de datos, ya que toda sesión debe ser iniciada por un visitante según el esquema.\nMATCH (s:Session)\nWHERE NOT EXISTS ((:Visitor)-[:INICIO_SESION]->(s))\nRETURN s.session_id, s.date, s.source\nLIMIT 100;",
+          "status": "failed",
+          "error": "{code: Neo.ClientError.Statement.SyntaxError} {message: Expected exactly one statement per query but got: 5 (line 2, column 0 (offset: 276))\n\"MATCH (v:Visitor)-[:IDENTIFIED_AS]->(u:User)\"\n ^}"
+        },
+        {
+          "attempt": 3,
+          "cypher": "Para una pregunta tan abierta, la mejor estrategia es plantear varias hipótesis sobre posibles anomalías en los datos y luego escribir una consulta para validar cada una. Aquí tienes varias consultas, cada una diseñada para detectar un tipo específico de patrón inusual.\n\n// Hipótesis 1: Un visitante anónimo está vinculado a múltiples usuarios registrados.\n// Esto es un fuerte indicador de un problema en la lógica de identificación de usuarios. Un solo `Visitor` (cookie/huella) no debería poder asociarse a más de una cuenta de `User`.\nMATCH (v:Visitor)-[:IDENTIFIED_AS]->(u:User)\nWITH v, collect(u.user_id) AS usuarios_asociados\nWHERE size(usuarios_asociados) > 1\nRETURN v.id AS visitor_id, usuarios_asociados;\n\n// Hipótesis 2: Hay sesiones con una actividad anormalmente alta (posibles bots).\n// Una sesión con muchísimos eventos en un corto período de tiempo puede ser un bot o un scraper. Buscaremos sesiones con más de 50 eventos, un umbral inicial que se puede ajustar.\nMATCH (s:Session)-[:CONTIENE]->(:Event)\nWITH s, count(*) AS numero_eventos\nWHERE numero_eventos > 50\nRETURN s.session_id, s.source, s.device, numero_eventos\nORDER BY numero_eventos DESC\nLIMIT 10;\n\n// Hipótesis 3: Cuantificar las conversiones realizadas por \"invitados\" vs. usuarios logueados.\n// Esto no es necesariamente un error, pero es un patrón de negocio crucial. Permite entender qué porcentaje de las ventas proviene de usuarios no registrados.\nMATCH (s:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\nOPTIONAL MATCH (u:User)-[:REALIZO]->(s)\nWITH count(s) AS total_conversiones, count(CASE WHEN u IS NULL THEN 1 END) AS conversiones_invitado\nRETURN\n  total_conversiones,\n  conversiones_invitado,\n  round(100.0 * conversiones_invitado / total_conversiones, 2) AS porcentaje_invitado;\n\n// Hipótesis 4: Existen usuarios que realizaron una conversión ANTES de su fecha de registro.\n// Esto es lógicamente imposible y señalaría un problema grave en la ingesta de datos o en la atribución de fechas. Se busca en el historial del visitante asociado al usuario.\nMATCH (u:User)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(s:Session)-[:CONVERSION_REALIZADA]->(:Conversion)\nWHERE s.date < u.registration_date\nRETURN u.user_id, u.registration_date, s.session_id, s.date AS conversion_date\nLIMIT 25;\n\n// Hipótesis 5: Hay sesiones \"huérfanas\" que no provienen de ningún visitante.\n// Esto indicaría un problema grave en la ingesta de datos, ya que toda sesión debe ser iniciada por un visitante según el esquema.\nMATCH (s:Session)\nWHERE NOT EXISTS ((:Visitor)-[:INICIO_SESION]->(s))\nRETURN s.session_id, s.date, s.source\nLIMIT 100;",
+          "status": "failed",
+          "error": "{code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input 'Para': expected 'ALTER', 'ORDER BY', 'CALL', 'USING PERIODIC COMMIT', 'CREATE', 'LOAD CSV', 'START DATABASE', 'STOP DATABASE', 'DEALLOCATE', 'DELETE', 'DENY', 'DETACH', 'DROP', 'DRYRUN', 'FINISH', 'FOREACH', 'GRANT', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REALLOCATE', 'REMOVE', 'RENAME', 'RETURN', 'REVOKE', 'ENABLE SERVER', 'SET', 'SHOW', 'SKIP', 'TERMINATE', 'UNWIND', 'USE' or 'WITH' (line 1, column 9 (offset: 8))\n\"EXPLAIN Para una pregunta tan abierta, la mejor estrategia es plantear varias hipótesis sobre posibles anomalías en los datos y luego escribir una consulta para validar cada una. Aquí tienes varias consultas, cada una diseñada para detectar un tipo específico de patrón inusual.\"\n         ^}"
+        }
+      ]
+    },
+    {
+      "test_id": "stress_neg_01",
+      "category": "negacion",
+      "difficulty": "hard",
+      "question": "¿Qué visitantes nunca se identificaron pero tienen más de 5 sesiones?",
+      "success": true,
+      "execution_time": 22.176286458969116,
+      "cypher_generated": "MATCH (v:Visitor)\nWHERE NOT EXISTS((v)-[:IDENTIFIED_AS]->(:User))\nWITH v, COUNT { (v)-[:INICIO_SESION]->(:Session) } AS totalSessions\nWHERE totalSessions > 5\nRETURN v.id AS visitorId, totalSessions\nORDER BY totalSessions DESC",
+      "attempts": 2,
+      "error": "",
+      "result_sample": "[]",
+      "notes": "Requiere negación con EXISTS",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (v:Visitor)\nWHERE NOT EXISTS((v)-[:IDENTIFIED_AS]->(:User)) AND size((v)-[:INICIO_SESION]->(:Session)) > 5\nRETURN v.id AS visitorId, size((v)-[:INICIO_SESION]->(:Session)) AS totalSessions\nORDER BY totalSessions DESC",
+          "status": "failed",
+          "error": "{code: Neo.ClientError.Statement.SyntaxError} {message: A pattern expression should only be used in order to test the existence of a pattern. It can no longer be used inside the function size(), an alternative is to replace size() with COUNT {}. (line 2, column 58 (offset: 83))\n\"WHERE NOT EXISTS((v)-[:IDENTIFIED_AS]->(:User)) AND size((v)-[:INICIO_SESION]->(:Session)) > 5\"\n                                                          ^}"
+        },
+        {
+          "attempt": 2,
+          "cypher": "MATCH (v:Visitor)\nWHERE NOT EXISTS((v)-[:IDENTIFIED_AS]->(:User))\nWITH v, COUNT { (v)-[:INICIO_SESION]->(:Session) } AS totalSessions\nWHERE totalSessions > 5\nRETURN v.id AS visitorId, totalSessions\nORDER BY totalSessions DESC",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "stress_neg_02",
+      "category": "negacion",
+      "difficulty": "very_hard",
+      "question": "¿Qué usuarios se registraron pero nunca han realizado una conversión en los últimos 60 días?",
+      "success": true,
+      "execution_time": 17.517037868499756,
+      "cypher_generated": "WITH datetime() - duration({days: 60}) AS fecha_limite\nMATCH (u:User)\nWHERE NOT EXISTS {\n  MATCH (u)-[:REALIZO]->(:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\n  WHERE c.timestamp >= fecha_limite\n}\nRETURN u.user_id, u.first_name, u.last_name, u.email, u.registration_date\nORDER BY u.registration_date DESC",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'u.user_id': 'U-d10cebf6', 'u.first_name': 'Emiliana', 'u.last_name': 'Beltran', 'u.email': 'oribas@example.net', 'u.registration_date': neo4j.time.DateTime(2025, 11, 21, 23, 32, 53, 414448000, tzin",
+      "notes": "Requiere negación con filtro temporal",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "WITH datetime() - duration({days: 60}) AS fecha_limite\nMATCH (u:User)\nWHERE NOT EXISTS {\n  MATCH (u)-[:REALIZO]->(:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\n  WHERE c.timestamp >= fecha_limite\n}\nRETURN u.user_id, u.first_name, u.last_name, u.email, u.registration_date\nORDER BY u.registration_date DESC",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "stress_seg_01",
+      "category": "segmentacion",
+      "difficulty": "hard",
+      "question": "Agrupa usuarios en tres segmentos: alto valor (3+ conversiones), medio valor (1-2 conversiones), bajo valor (0 conversiones) y cuenta cuántos hay en cada uno",
+      "success": true,
+      "execution_time": 14.507445812225342,
+      "cypher_generated": "MATCH (u:User)\nOPTIONAL MATCH (u)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\nWITH u, count(c) AS totalConversions\nWITH CASE\n    WHEN totalConversions >= 3 THEN 'Alto Valor'\n    WHEN totalConversions >= 1 THEN 'Medio Valor'\n    ELSE 'Bajo Valor'\nEND AS segmento\nRETURN segmento, count(*) AS numeroDeUsuarios\nORDER BY numeroDeUsuarios DESC",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[{'segmento': 'Medio Valor', 'numeroDeUsuarios': 41}, {'segmento': 'Bajo Valor', 'numeroDeUsuarios': 33}, {'segmento': 'Alto Valor', 'numeroDeUsuarios': 26}]",
+      "notes": "Requiere CASE statements o múltiples agregaciones",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (u:User)\nOPTIONAL MATCH (u)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\nWITH u, count(c) AS totalConversions\nWITH CASE\n    WHEN totalConversions >= 3 THEN 'Alto Valor'\n    WHEN totalConversions >= 1 THEN 'Medio Valor'\n    ELSE 'Bajo Valor'\nEND AS segmento\nRETURN segmento, count(*) AS numeroDeUsuarios\nORDER BY numeroDeUsuarios DESC",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "stress_seg_02",
+      "category": "segmentacion",
+      "difficulty": "very_hard",
+      "question": "¿Qué características tienen en común los usuarios del top 10% en términos de engagement (número de eventos)?",
+      "success": true,
+      "execution_time": 49.43437933921814,
+      "cypher_generated": "// Paso 1: Calcular el total de eventos por usuario para identificar el 10% más activo.\nMATCH (u:User)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(:Session)-[:CONTIENE]->(e:Event)\nWITH u, count(e) AS totalEvents\nORDER BY totalEvents DESC\nLIMIT 10 // Límite basado en el contexto: 10% de 100 usuarios totales.\n\n// Paso 2: Con estos usuarios top, volver a encontrar todas sus sesiones para analizar sus características.\nMATCH (u)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(s:Session)\n\n// Paso 3: Devolver la distribución de características comunes (ciudad, fuente, dispositivo)\n// y contar cuántas sesiones corresponden a cada combinación.\nRETURN\n    u.city AS ciudad_usuario,\n    s.source AS fuente_trafico,\n    s.device AS tipo_dispositivo,\n    count(s) AS numero_de_sesiones\nORDER BY\n    numero_de_sesiones DESC",
+      "attempts": 2,
+      "error": "",
+      "result_sample": "[{'ciudad_usuario': 'Valladolid', 'fuente_trafico': 'newsletter', 'tipo_dispositivo': 'desktop', 'numero_de_sesiones': 4}, {'ciudad_usuario': 'Palencia', 'fuente_trafico': 'facebook', 'tipo_dispositiv",
+      "notes": "Requiere percentiles y análisis comparativo",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "Claro, aquí tienes la consulta Cypher para identificar las características comunes de los usuarios más comprometidos.\n\nLa estrategia es:\n1.  Calcular el número total de eventos para cada usuario, asegurándonos de incluir su actividad anónima antes de registrarse usando la ruta `(User)<-[:IDENTIFIED_AS]-(Visitor)`.\n2.  Ordenar los usuarios por este conteo de eventos de forma descendente.\n3.  Limitar los resultados al 10% superior (que son 10 usuarios, según el contexto de 100 usuarios totales).\n4.  Para este grupo de élite, encontrar todas sus sesiones y agregar sus características (ciudad, fuente de tráfico, dispositivo) para ver cuáles son las más frecuentes.\n\n\n// Paso 1: Identificar al 10% de usuarios con más eventos en su historial completo.\nMATCH (u:User)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(:Session)-[:CONTIENE]->(e:Event)\nWITH u, count(e) AS totalEvents\nORDER BY totalEvents DESC\nLIMIT 10 // Límite basado en el contexto: 10% de 100 usuarios totales.\n\n// Paso 2: Con estos usuarios top, encontrar todas sus sesiones para analizar sus características.\nMATCH (u)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(s:Session)\n\n// Paso 3: Devolver la distribución de características comunes como ciudad, fuente y dispositivo,\n// contando las sesiones que comparten estas características.\nRETURN\n    u.city AS ciudad_usuario,\n    s.source AS fuente_trafico,\n    s.device AS tipo_dispositivo,\n    count(DISTINCT s) AS numero_de_sesiones\nORDER BY\n    numero_de_sesiones DESC",
+          "status": "failed",
+          "error": "{code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input 'Claro': expected 'ALTER', 'ORDER BY', 'CALL', 'USING PERIODIC COMMIT', 'CREATE', 'LOAD CSV', 'START DATABASE', 'STOP DATABASE', 'DEALLOCATE', 'DELETE', 'DENY', 'DETACH', 'DROP', 'DRYRUN', 'FINISH', 'FOREACH', 'GRANT', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REALLOCATE', 'REMOVE', 'RENAME', 'RETURN', 'REVOKE', 'ENABLE SERVER', 'SET', 'SHOW', 'SKIP', 'TERMINATE', 'UNWIND', 'USE' or 'WITH' (line 1, column 9 (offset: 8))\n\"EXPLAIN Claro, aquí tienes la consulta Cypher para identificar las características comunes de los usuarios más comprometidos.\"\n         ^}"
+        },
+        {
+          "attempt": 2,
+          "cypher": "// Paso 1: Calcular el total de eventos por usuario para identificar el 10% más activo.\nMATCH (u:User)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(:Session)-[:CONTIENE]->(e:Event)\nWITH u, count(e) AS totalEvents\nORDER BY totalEvents DESC\nLIMIT 10 // Límite basado en el contexto: 10% de 100 usuarios totales.\n\n// Paso 2: Con estos usuarios top, volver a encontrar todas sus sesiones para analizar sus características.\nMATCH (u)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(s:Session)\n\n// Paso 3: Devolver la distribución de características comunes (ciudad, fuente, dispositivo)\n// y contar cuántas sesiones corresponden a cada combinación.\nRETURN\n    u.city AS ciudad_usuario,\n    s.source AS fuente_trafico,\n    s.device AS tipo_dispositivo,\n    count(s) AS numero_de_sesiones\nORDER BY\n    numero_de_sesiones DESC",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "stress_multi_01",
+      "category": "multi_concepto",
+      "difficulty": "very_hard",
+      "question": "¿Cuál es la combinación de ciudad y dispositivo con mejor ROI, definido como tasa de conversión multiplicada por número de eventos promedio?",
+      "success": true,
+      "execution_time": 70.64178133010864,
+      "cypher_generated": "MATCH (u:User)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(s:Session)\nMATCH (s)-[:CONTIENE]->(e:Event)\nOPTIONAL MATCH (s)-[:CONVERSION_REALIZADA]->(c:Conversion)\nWITH u.city AS ciudad, s.device AS dispositivo,\n     count(DISTINCT s) AS totalSesiones,\n     count(c) AS sesionesConConversion,\n     count(e) AS totalEventos\nWHERE ciudad IS NOT NULL AND dispositivo IS NOT NULL AND totalSesiones > 1\nWITH ciudad, dispositivo, totalSesiones, sesionesConConversion, totalEventos,\n     toFloat(sesionesConConversion) / totalSesiones AS tasaConversion,\n     toFloat(totalEventos) / totalSesiones AS eventosPromedio\nRETURN ciudad, dispositivo,\n       (tasaConversion * eventosPromedio) AS roi,\n       tasaConversion,\n       eventosPromedio,\n       totalSesiones\nORDER BY roi DESC\nLIMIT 10",
+      "attempts": 3,
+      "error": "",
+      "result_sample": "[{'ciudad': 'Madrid', 'dispositivo': 'desktop', 'roi': 592.1111111111111, 'tasaConversion': 24.333333333333332, 'eventosPromedio': 24.333333333333332, 'totalSesiones': 3}, {'ciudad': 'Cantabria', 'dis",
+      "notes": "Combina múltiples métricas en cálculo personalizado",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (u:User)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(s:Session)\nOPTIONAL MATCH (s)-[:CONVERSION_REALIZADA]->(c:Conversion)\nMATCH (s)-[:CONTIENE]->(e:Event)\nWITH u.city AS ciudad, s.device AS dispositivo, \n     count(DISTINCT s) AS totalSesiones, \n     count(DISTINCT c) AS sesionesConConversion, \n     count(e) AS totalEventos\nWHERE totalSesiones > 1 AND ciudad IS NOT NULL AND dispositivo IS NOT NULL\nWITH ciudad, dispositivo, totalSesiones, totalEventos,\n     toFloat(sesionesConConversion) / totalSesiones AS tasaConversion\nWITH ciudad, dispositivo, totalSesiones, tasaConversion,\n     toFloat(totalEventos) / totalSesiones AS eventosPromedio\nWITH ciudad, dispositivo, totalSesiones, tasaConversion, eventosPromedio,\n     (tasaConversion * (toFloat(totalEventos) / totalSesiones)) AS roi\nRETURN ciudad, dispositivo, roi, tasaConversion, eventosPromedio, totalSesiones\nORDER BY roi DESC\nLIMIT 10",
+          "status": "failed",
+          "error": "{code: Neo.ClientError.Statement.SyntaxError} {message: Variable `totalEventos` not defined (line 14, column 33 (offset: 770))\n\"     (tasaConversion * (toFloat(totalEventos) / totalSesiones)) AS roi\"\n                                 ^}"
+        },
+        {
+          "attempt": 2,
+          "cypher": "El error se produce porque la variable `totalEventos` se pierde en la cadena de cláusulas `WITH`. Cada `WITH` define qué variables están disponibles para la siguiente cláusula. La corrección consiste en realizar los cálculos de las métricas derivadas en un solo paso para mantener todas las variables necesarias en el mismo ámbito.\n\nMATCH (u:User)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(s:Session)\nMATCH (s)-[:CONTIENE]->(e:Event)\nOPTIONAL MATCH (s)-[:CONVERSION_REALIZADA]->(c:Conversion)\nWITH u.city AS ciudad, s.device AS dispositivo,\n     count(DISTINCT s) AS totalSesiones,\n     count(DISTINCT c) AS sesionesConConversion,\n     count(e) AS totalEventos\nWHERE ciudad IS NOT NULL AND dispositivo IS NOT NULL AND totalSesiones > 1\nWITH ciudad, dispositivo, totalSesiones,\n     toFloat(sesionesConConversion) / totalSesiones AS tasaConversion,\n     toFloat(totalEventos) / totalSesiones AS eventosPromedio\nRETURN ciudad, dispositivo,\n       (tasaConversion * eventosPromedio) AS roi,\n       tasaConversion,\n       eventosPromedio,\n       totalSesiones\nORDER BY roi DESC\nLIMIT 10",
+          "status": "failed",
+          "error": "{code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input 'El': expected 'ALTER', 'ORDER BY', 'CALL', 'USING PERIODIC COMMIT', 'CREATE', 'LOAD CSV', 'START DATABASE', 'STOP DATABASE', 'DEALLOCATE', 'DELETE', 'DENY', 'DETACH', 'DROP', 'DRYRUN', 'FINISH', 'FOREACH', 'GRANT', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REALLOCATE', 'REMOVE', 'RENAME', 'RETURN', 'REVOKE', 'ENABLE SERVER', 'SET', 'SHOW', 'SKIP', 'TERMINATE', 'UNWIND', 'USE' or 'WITH' (line 1, column 9 (offset: 8))\n\"EXPLAIN El error se produce porque la variable `totalEventos` se pierde en la cadena de cláusulas `WITH`. Cada `WITH` define qué variables están disponibles para la siguiente cláusula. La corrección consiste en realizar los cálculos de las métricas derivadas en un solo paso para mantener todas las variables necesarias en el mismo ámbito.\"\n         ^}"
+        },
+        {
+          "attempt": 3,
+          "cypher": "MATCH (u:User)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(s:Session)\nMATCH (s)-[:CONTIENE]->(e:Event)\nOPTIONAL MATCH (s)-[:CONVERSION_REALIZADA]->(c:Conversion)\nWITH u.city AS ciudad, s.device AS dispositivo,\n     count(DISTINCT s) AS totalSesiones,\n     count(c) AS sesionesConConversion,\n     count(e) AS totalEventos\nWHERE ciudad IS NOT NULL AND dispositivo IS NOT NULL AND totalSesiones > 1\nWITH ciudad, dispositivo, totalSesiones, sesionesConConversion, totalEventos,\n     toFloat(sesionesConConversion) / totalSesiones AS tasaConversion,\n     toFloat(totalEventos) / totalSesiones AS eventosPromedio\nRETURN ciudad, dispositivo,\n       (tasaConversion * eventosPromedio) AS roi,\n       tasaConversion,\n       eventosPromedio,\n       totalSesiones\nORDER BY roi DESC\nLIMIT 10",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "test_id": "stress_multi_02",
+      "category": "multi_concepto",
+      "difficulty": "extreme",
+      "question": "Identifica usuarios que muestran comportamiento de 'power user': más de 10 sesiones, promedio de más de 5 eventos por sesión, al menos una conversión, y han usado tanto mobile como desktop",
+      "success": true,
+      "execution_time": 29.318401336669922,
+      "cypher_generated": "MATCH (u:User)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(s:Session)\nWITH u,\n     COUNT(DISTINCT s) AS session_count,\n     COLLECT(DISTINCT s.device) AS devices_used\nWHERE session_count > 10 AND 'mobile' IN devices_used AND 'desktop' IN devices_used\nMATCH (u)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(s:Session)-[:CONTIENE]->(e:Event)\nWITH u, session_count, devices_used, COUNT(e) AS event_count\nWHERE toFloat(event_count) / session_count > 5.0\nMATCH (u)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\nWITH u,\n     session_count,\n     event_count,\n     COUNT(c) AS conversion_count\nWHERE conversion_count >= 1\nRETURN u.user_id AS id_usuario,\n       u.first_name AS nombre,\n       u.last_name AS apellido,\n       session_count AS total_sesiones,\n       round(toFloat(event_count) / session_count, 2) AS eventos_promedio_por_sesion,\n       conversion_count AS total_conversiones\nORDER BY total_sesiones DESC, eventos_promedio_por_sesion DESC",
+      "attempts": 1,
+      "error": "",
+      "result_sample": "[]",
+      "notes": "Requiere múltiples condiciones complejas en diferentes niveles",
+      "cypher_attempts": [
+        {
+          "attempt": 1,
+          "cypher": "MATCH (u:User)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(s:Session)\nWITH u,\n     COUNT(DISTINCT s) AS session_count,\n     COLLECT(DISTINCT s.device) AS devices_used\nWHERE session_count > 10 AND 'mobile' IN devices_used AND 'desktop' IN devices_used\nMATCH (u)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(s:Session)-[:CONTIENE]->(e:Event)\nWITH u, session_count, devices_used, COUNT(e) AS event_count\nWHERE toFloat(event_count) / session_count > 5.0\nMATCH (u)<-[:IDENTIFIED_AS]-(:Visitor)-[:INICIO_SESION]->(:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\nWITH u,\n     session_count,\n     event_count,\n     COUNT(c) AS conversion_count\nWHERE conversion_count >= 1\nRETURN u.user_id AS id_usuario,\n       u.first_name AS nombre,\n       u.last_name AS apellido,\n       session_count AS total_sesiones,\n       round(toFloat(event_count) / session_count, 2) AS eventos_promedio_por_sesion,\n       conversion_count AS total_conversiones\nORDER BY total_sesiones DESC, eventos_promedio_por_sesion DESC",
+          "status": "success"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "timestamp": "2025-11-29T16:45:38.358246",
+    "test_type": "stress_test",
+    "model": "models/gemini-2.5-pro",
+    "embedding_model": "models/text-embedding-004",
+    "neo4j_url": "neo4j+s://ce30717d.databases.neo4j.io"
+  }
+}

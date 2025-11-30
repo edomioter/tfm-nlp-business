@@ -1,10 +1,82 @@
 [
   {
-    "question": "¿Cuál es la ruta de navegación más común de los usuarios que acabaron comprando el producto X?",
-    "cypher": "MATCH (c:Cliente)-[:COMPRO_EN]->(e:Empresa) WHERE e.nombre CONTAINS 'X' MATCH (c)-[:REALIZO_VISITA]->(v:VisitaWeb) WITH c, v ORDER BY v.fecha ASC WITH c, collect(v.url) as path RETURN str(path) as ruta, count(*) as frecuencia ORDER BY frecuencia DESC LIMIT 5"
+    "question": "¿Cuántas conversiones se realizaron la semana pasada?",
+    "cypher": "MATCH (s:Session)-[:CONVERSION_REALIZADA]->(c:Conversion) WHERE c.timestamp >= datetime() - duration('P7D') RETURN count(c) as total_conversiones"
   },
   {
-    "question": "¿Cuántos leads se convirtieron en clientes la semana pasada?",
-    "cypher": "MATCH (l:Lead) WHERE l.fecha_conversion >= date() - duration('P7D') RETURN count(l)"
+    "question": "¿Cuál es la ruta de navegación más común de los usuarios que realizaron una conversión?",
+    "cypher": "MATCH (s:Session)-[:CONVERSION_REALIZADA]->(c:Conversion) MATCH (s)-[:CONTIENE]->(e:Event) WITH s, e ORDER BY e.timestamp ASC WITH s, collect(e.url) as ruta RETURN ruta, count(*) as frecuencia ORDER BY frecuencia DESC LIMIT 5"
+  },
+  {
+    "question": "¿Cuántos usuarios se registraron este mes?",
+    "cypher": "MATCH (u:User) WHERE u.registration_date >= datetime({year: date().year, month: date().month, day: 1}) RETURN count(u) as usuarios_registrados"
+  },
+  {
+    "question": "¿Cuál es el dispositivo más usado para realizar conversiones?",
+    "cypher": "MATCH (s:Session)-[:CONVERSION_REALIZADA]->(c:Conversion) RETURN s.device as dispositivo, count(c) as conversiones ORDER BY conversiones DESC LIMIT 1"
+  },
+  {
+    "question": "¿Qué fuente de tráfico genera más conversiones?",
+    "cypher": "MATCH (s:Session)-[:CONVERSION_REALIZADA]->(c:Conversion) RETURN s.source as fuente, s.medium as medio, count(c) as conversiones ORDER BY conversiones DESC LIMIT 5"
+  },
+  {
+    "question": "¿Cuántas sesiones tuvieron los visitantes antes de registrarse como usuarios?",
+    "cypher": "MATCH (u:User)<-[:IDENTIFIED_AS]-(v:Visitor)-[:INICIO_SESION]->(s:Session) WHERE s.date < u.registration_date RETURN u.email, count(s) as sesiones_previas ORDER BY sesiones_previas DESC"
+  },
+  {
+    "question": "¿Cuál fue el comportamiento de navegación completo de un usuario antes y después de registrarse?",
+    "cypher": "MATCH (u:User {email: 'ejemplo@email.com'}) OPTIONAL MATCH (u)<-[:IDENTIFIED_AS]-(v:Visitor)-[:INICIO_SESION]->(s1:Session)-[:CONTIENE]->(e1:Event) WHERE s1.date < u.registration_date OPTIONAL MATCH (u)-[:REALIZO]->(s2:Session)-[:CONTIENE]->(e2:Event) WITH u, collect(DISTINCT {fase: 'anonimo', fecha: e1.timestamp, url: e1.url, evento: e1.name}) + collect(DISTINCT {fase: 'registrado', fecha: e2.timestamp, url: e2.url, evento: e2.name}) as eventos RETURN eventos ORDER BY eventos.fecha"
+  },
+  {
+    "question": "¿Cuántos eventos de tipo 'page_view' se registraron hoy?",
+    "cypher": "MATCH (e:Event) WHERE e.name = 'page_view' AND date(e.timestamp) = date() RETURN count(e) as page_views"
+  },
+  {
+    "question": "¿Cuál es la tasa de conversión por dispositivo?",
+    "cypher": "MATCH (s:Session) WITH s.device as dispositivo, count(s) as total_sesiones OPTIONAL MATCH (s2:Session {device: dispositivo})-[:CONVERSION_REALIZADA]->(c:Conversion) WITH dispositivo, total_sesiones, count(c) as conversiones RETURN dispositivo, total_sesiones, conversiones, round(toFloat(conversiones) / total_sesiones * 100, 2) as tasa_conversion_porcentaje ORDER BY tasa_conversion_porcentaje DESC"
+  },
+  {
+    "question": "¿Cuántos visitantes únicos tuvimos esta semana?",
+    "cypher": "MATCH (v:Visitor)-[:INICIO_SESION]->(s:Session) WHERE s.date >= datetime() - duration('P7D') RETURN count(DISTINCT v.id) as visitantes_unicos"
+  },
+  {
+    "question": "¿Qué páginas se visitaron antes de una conversión?",
+    "cypher": "MATCH (s:Session)-[:CONVERSION_REALIZADA]->(c:Conversion) MATCH (s)-[:CONTIENE]->(e:Event) WHERE e.timestamp < c.timestamp RETURN e.url, e.title, count(*) as frecuencia ORDER BY frecuencia DESC LIMIT 10"
+  },
+  {
+    "question": "¿Cuánto tiempo en promedio pasan los usuarios antes de realizar una conversión?",
+    "cypher": "MATCH (s:Session)-[:CONTIENE]->(e1:Event) WITH s, min(e1.timestamp) as primera_actividad MATCH (s)-[:CONVERSION_REALIZADA]->(c:Conversion) RETURN avg(duration.between(primera_actividad, c.timestamp).seconds) / 60 as minutos_promedio"
+  },
+  {
+    "question": "¿Cuáles son las ciudades de los usuarios que más convierten?",
+    "cypher": "MATCH (u:User)-[:REALIZO]->(s:Session)-[:CONVERSION_REALIZADA]->(c:Conversion) RETURN u.city as ciudad, count(c) as conversiones ORDER BY conversiones DESC LIMIT 10"
+  },
+  {
+    "question": "¿Cuántas sesiones no tienen conversiones?",
+    "cypher": "MATCH (s:Session) WHERE NOT (s)-[:CONVERSION_REALIZADA]->() RETURN count(s) as sesiones_sin_conversion"
+  },
+  {
+    "question": "¿Qué eventos ocurren con más frecuencia en sesiones con conversión?",
+    "cypher": "MATCH (s:Session)-[:CONVERSION_REALIZADA]->(:Conversion) MATCH (s)-[:CONTIENE]->(e:Event) RETURN e.name as tipo_evento, count(*) as frecuencia ORDER BY frecuencia DESC LIMIT 10"
+  },
+  {
+    "question": "¿Cuántos usuarios tienen sesiones registradas?",
+    "cypher": "MATCH (u:User)-[:REALIZO]->(s:Session) RETURN count(DISTINCT u.user_id) as usuarios_con_sesiones"
+  },
+  {
+    "question": "¿Cuál es el promedio de eventos por sesión?",
+    "cypher": "MATCH (s:Session)-[:CONTIENE]->(e:Event) WITH s, count(e) as eventos_por_sesion RETURN avg(eventos_por_sesion) as promedio_eventos"
+  },
+  {
+    "question": "¿Qué visitantes se identificaron como usuarios registrados?",
+    "cypher": "MATCH (v:Visitor)-[:IDENTIFIED_AS]->(u:User) RETURN v.id as visitor_id, u.email, u.first_name, u.last_name, u.registration_date LIMIT 20"
+  },
+  {
+    "question": "¿Cuántas conversiones se realizaron desde dispositivos móviles vs desktop?",
+    "cypher": "MATCH (s:Session)-[:CONVERSION_REALIZADA]->(c:Conversion) WITH CASE WHEN s.device IN ['mobile', 'tablet'] THEN 'mobile' ELSE 'desktop' END as categoria, count(c) as conversiones RETURN categoria, conversiones"
+  },
+  {
+    "question": "¿Cuál es la última conversión registrada?",
+    "cypher": "MATCH (c:Conversion) RETURN c ORDER BY c.timestamp DESC LIMIT 1"
   }
 ]

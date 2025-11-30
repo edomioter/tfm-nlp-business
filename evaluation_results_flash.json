@@ -1,9 +1,9 @@
 {
   "summary": {
     "total_tests": 13,
-    "successful": 12,
-    "failed": 1,
-    "success_rate": 0.9230769230769231,
+    "successful": 11,
+    "failed": 2,
+    "success_rate": 0.8461538461538462,
     "avg_execution_time": 3.5983233085045447,
     "avg_attempts": 1.1538461538461537
   },
@@ -22,9 +22,9 @@
     },
     "compleja": {
       "total": 3,
-      "success": 3,
+      "success": 2,
       "avg_time": 6.83893346786499,
-      "success_rate": 1.0
+      "success_rate": 0.66
     },
     "temporal": {
       "total": 2,
@@ -170,7 +170,7 @@
       "test_id": "complex_02",
       "category": "compleja",
       "question": "¿Cuál es la ruta más común de eventos que llevan a una conversión?",
-      "success": true,
+      "success": false,
       "execution_time": 16.537938356399536,
       "cypher_generated": "MATCH (s:Session)-[:CONVERSION_REALIZADA]->(c:Conversion)\nMATCH (s)-[:CONTIENE]->(e:Event)\nWHERE e.timestamp < c.timestamp\nWITH s, e\nORDER BY e.timestamp\nWITH s, COLLECT(e.name) AS eventPath\nWHERE SIZE(eventPath) > 0\nRETURN eventPath, COUNT(eventPath) AS pathCount\nORDER BY pathCount DESC\nLIMIT 1",
       "attempts": 2,
